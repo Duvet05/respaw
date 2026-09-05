@@ -40,7 +40,8 @@
   "artifacts": {
     "restorable_raw_flash": "firmware-full.bin",
     "restorable_full_intel_hex": "firmware-full.hex",
-    "compact_intel_hex": "firmware-programmed-only.hex",
+    "compact_full_intel_hex": "firmware-programmed-only.hex",
+    "application_only_intel_hex": "application-only.hex",
     "restorable_raw_eeprom": "eeprom.bin",
     "restorable_eeprom_intel_hex": "eeprom.hex",
     "printable_strings": "printable-strings.json"
@@ -48,5 +49,15 @@
   "limitations": [
     "Compiled AVR flash does not contain original comments or most source-level names.",
     "The exact original .ino/.cpp source cannot be reconstructed bit-for-bit from this image."
-  ]
+  ],
+  "source_candidate": {
+    "artifact": "source-candidate/FINAL_FINAL_FINAL_TESIS_AMIR_FLORES.ino",
+    "sha256": "73999c29e14e43f8dec78f26db58ddee244fc85c097a51a3293a7436a1a1f401",
+    "bytes": 22497,
+    "status": "high-confidence candidate; exact build identity not proven",
+    "string_comparison_artifact": "source-candidate/firmware-string-comparison.json",
+    "matched_literals": 17,
+    "distinct_literals_compared": 17,
+    "all_compared_literals_match": true
+  }
 }

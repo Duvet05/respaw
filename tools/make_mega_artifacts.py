@@ -92,6 +92,7 @@ def main() -> int:
     shutil.copyfile(ROOT / "eeprom-pass2.bin", canonical_eeprom)
     write_ihex(ROOT / "firmware-full.hex", flash2, skip_erased=False)
     write_ihex(ROOT / "firmware-programmed-only.hex", flash2, skip_erased=True)
+    write_ihex(ROOT / "application-only.hex", flash2[:BOOT_START], skip_erased=True)
     write_ihex(ROOT / "eeprom.hex", eeprom2, skip_erased=False)
 
     application = flash2[:BOOT_START]
@@ -136,7 +137,8 @@ def main() -> int:
         "artifacts": {
             "restorable_raw_flash": canonical_flash.name,
             "restorable_full_intel_hex": "firmware-full.hex",
-            "compact_intel_hex": "firmware-programmed-only.hex",
+            "compact_full_intel_hex": "firmware-programmed-only.hex",
+            "application_only_intel_hex": "application-only.hex",
             "restorable_raw_eeprom": canonical_eeprom.name,
             "restorable_eeprom_intel_hex": "eeprom.hex",
             "printable_strings": "printable-strings.json",
@@ -146,6 +148,23 @@ def main() -> int:
             "The exact original .ino/.cpp source cannot be reconstructed bit-for-bit from this image.",
         ],
     }
+    candidate_source = ROOT / "source-candidate" / "FINAL_FINAL_FINAL_TESIS_AMIR_FLORES.ino"
+    comparison_report = ROOT / "source-candidate" / "firmware-string-comparison.json"
+    if candidate_source.exists():
+        source_bytes = candidate_source.read_bytes()
+        candidate_details: dict[str, object] = {
+            "artifact": str(candidate_source.relative_to(ROOT)),
+            "sha256": digest(source_bytes),
+            "bytes": len(source_bytes),
+            "status": "high-confidence candidate; exact build identity not proven",
+        }
+        if comparison_report.exists():
+            comparison = json.loads(comparison_report.read_text(encoding="utf-8"))
+            candidate_details["string_comparison_artifact"] = str(comparison_report.relative_to(ROOT))
+            candidate_details["matched_literals"] = comparison.get("matched_literals")
+            candidate_details["distinct_literals_compared"] = comparison.get("distinct_literals_compared")
+            candidate_details["all_compared_literals_match"] = comparison.get("all_compared_literals_match")
+        report["source_candidate"] = candidate_details
     (ROOT / "recovery-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
