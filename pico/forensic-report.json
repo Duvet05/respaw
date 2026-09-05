@@ -1,0 +1,661 @@
+{
+  "device": "Raspberry Pi Pico W / RP2040 B2",
+  "usb_application": {
+    "vid": "2E8A",
+    "pid": "0005",
+    "serial": "e66368254f3e912e"
+  },
+  "usb_bootsel": {
+    "vid": "2E8A",
+    "pid": "0003",
+    "serial": "E0C9125B0D9B"
+  },
+  "flash": {
+    "bytes": 2097152,
+    "sha256": "7513edbca76064fd74171e2c441feb1b1404457f4a752c0d901dfe71bae2da4c",
+    "two_reads_identical": true,
+    "picotool_verification_passed_each_read": true
+  },
+  "firmware": {
+    "name": "MicroPython",
+    "version": "1.26.1",
+    "build_date": "2025-09-11",
+    "sdk_version": "2.1.1",
+    "binary_range": "0x10000000-0x100D5998"
+  },
+  "filesystem": {
+    "range": "0x1012C000-0x10200000",
+    "flash_file_offset_range": "0x12C000-0x200000",
+    "bytes": 868352,
+    "sha256": "b54ac03a848a622ecc0733dee25396dc78bafc2b6d9959af401a23304c84fdbc",
+    "currently_visible_source_files": [
+      "max30102/__init__.py",
+      "max30102/circular_buffer.py"
+    ],
+    "boot_py_present": false,
+    "main_py_present": false
+  },
+  "deleted_source_recovery": {
+    "source_flash_offset": "0x1A9000",
+    "bytes": 638,
+    "sha256": "14d94912501d775e08f2a83947e4e9333e2b39c1b6a7867e2ccd8f77328b06d0",
+    "utf8_valid": true,
+    "python_syntax_valid": true,
+    "filename_inferred": "main.py-like sensor test; original filename was not recoverable",
+    "artifact": "recovered-deleted/recovered_source_0x1A9000.py"
+  },
+  "source_like_flash_pages": [
+    {
+      "address": "0x154000",
+      "sha256": "3d1af06e53736f4c482949b228d7bd8aadd4cd7f07b1139a502dc91591c2b2b4",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    },
+    {
+      "address": "0x155000",
+      "sha256": "4a227ce98273575a79e9e94056bd62bf083657c5705755002255dd7831f66b4a",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    },
+    {
+      "address": "0x156000",
+      "sha256": "87aaf84323437d309e18d4f347662193d36e1df2716676db1b1e40cec535ea85",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x157000",
+      "sha256": "2c6602e91a81dbc6ec4623e4406ddfec27577516b8abe7918dfe93bce524d053",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x158000",
+      "sha256": "6ca114c0404073a7cb5137d1b65891637a6ff4b9c9143fddb648930b5b1b580c",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x159000",
+      "sha256": "62eed53106ce386ed72d8c40bec95f290acdcc54bf139adfeccc2cb216dc2ae2",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x15A000",
+      "sha256": "36879534e30fb013102872010b7c7e48794ebc1b1181ca68bcb56d900faa66ed",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "-\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x15B000",
+      "sha256": "4a52f629b9c7359b6401416be6b844f29044bba3f1349d91d6464bb07bc6ae64",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "-\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x15C000",
+      "sha256": "75d3ace4800be0e2f19dbcde36cb008171708d75248155c819220d5bca0594ea",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "-\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x15D000",
+      "sha256": "e547a15d594b5a1d7331b7de1de9a506c8809ee5d6438cc4c5f1e29f20f9bb74",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "-\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x15F000",
+      "sha256": "2ee9fe0d684330a6bbec37e8caebc94f3b19b45f42c921c46de4ae816c901792",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "1\u0000\u0000\u0000-\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x160000",
+      "sha256": "414c7c10c502c2784699f04da0a18a274505750e7324a9eda8a8188960a85a25",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "1\u0000\u0000\u0000-\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x161000",
+      "sha256": "126c0840af34571c1f7c9c68b5fe668be637cc92ff13c82a5c385d159a7a8af1",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "1\u0000\u0000\u0000-\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x162000",
+      "sha256": "52495bb161fe70cdd6004293a7db0103074ba0005dbc23b82da9692bcfbdbf5d",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "1\u0000\u0000\u0000-\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x164000",
+      "sha256": "32ca9bbf836c3ab7ba9fb2a28284c8bffa18263450c18dcbfa5e48959eef5e5f",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "6\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x165000",
+      "sha256": "59bff4442dafae63a460c1ba619700f00480bc2e030e5ccb6db0d6226b15c152",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "6\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x166000",
+      "sha256": "b60a8343b38a1f283d934aad59c961777244be67a8a5bb2451fb8dbd4f8768a3",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "6\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x167000",
+      "sha256": "634a17060d5b371facae611eaf24f78008504cf5ebd501a9d90af4fe9704673c",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "6\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x169000",
+      "sha256": "2da7bac2f5be8119526d6513d656dea3f3a6db4c8d233784c78280d9367e1705",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9978,
+      "preview": ";\u0000\u0000\u00006\u0000\u0000\u0000-\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x16A000",
+      "sha256": "21d84c8bbd2dc1e165b281fc68a98287e73cb10beea54b316c1ca080d41b3521",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9978,
+      "preview": ";\u0000\u0000\u00006\u0000\u0000\u0000-\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x16B000",
+      "sha256": "34b1cdab350536b93474742bc4b7c7718dcefbd6586e7433baf5a59a869a9351",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9978,
+      "preview": ";\u0000\u0000\u00006\u0000\u0000\u0000-\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x16C000",
+      "sha256": "a57d9edc5c2c73f0ba69a469766c416a76a043d5acb72588d1fdef7dcea712f6",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9978,
+      "preview": ";\u0000\u0000\u00006\u0000\u0000\u0000-\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x16E000",
+      "sha256": "0fe2c6a1a532aac4c746db92e1e639a14b3f679f513163f3f27493a698094ea9",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "@\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x16F000",
+      "sha256": "25808c164b3bd50c5c0867ed15b3bb1ef9be88f39745bddfa2afd1d829219f1b",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "@\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x170000",
+      "sha256": "45629904c11dcbf1040e72667a7711867533821026495643e4f98e7f2c099e3b",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "@\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x171000",
+      "sha256": "0f84c8ca02c22c0f225ee3f16d67d3cf2c2021775f5d6e37ee7e609367434ff0",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9993,
+      "preview": "@\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x173000",
+      "sha256": "d82b95bda147ac68fff607cbe4d47d4dd5ce2b3d65b347f9d9c9ba7344f33f73",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "E\u0000\u0000\u0000@\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x174000",
+      "sha256": "e67df1ae650bc098233a9a33582727165acd0f9f0e47696b395d9ed23cf3e79a",
+      "marker_hits": [
+        "def ",
+        "while True:"
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "E\u0000\u0000\u0000@\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x175000",
+      "sha256": "ebf6ca9d1fd88779efb59e2912275efffdaafc41c717ddceb4de5526985a5848",
+      "marker_hits": [
+        "def ",
+        "while True:"
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "E\u0000\u0000\u0000@\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x1A8000",
+      "sha256": "e8865ae29df6c935c4043a1a488f646eb9338f68197286e741b813df36f0d5bc",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# -*-coding:utf-8-*-\n\n# this code is currently for python 2.7\nfrom __future__ import print_function\nfrom time import sleep\n\nimport RPi.GPIO as GPIO\nimport smbus"
+    },
+    {
+      "address": "0x1A9000",
+      "sha256": "8d02bcea591df60c63578e90ca2ae10047f64106c75bf3d256b202153aeed119",
+      "marker_hits": [
+        "from machine import",
+        "import max30102",
+        "while True:"
+      ],
+      "printable_ratio": 0.9985,
+      "preview": "from machine import Pin, I2C\nimport time\nimport max30102\n\n# Inicializar I2C\ni2c = I2C(0, scl=Pin(5), sda=Pin(4), freq=400000)\n\n# Inicializar el sensor\nsensor = "
+    },
+    {
+      "address": "0x1AA000",
+      "sha256": "73a024a98a622e654d393fd7143bba947cc2b90ce8bf60df9902aedc471fee41",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# -*-coding:utf-8-*-\n\n# this code is currently for python 2.7\nfrom __future__ import print_function\nfrom time import sleep\n\nimport RPi.GPIO as GPIO\nimport smbus"
+    },
+    {
+      "address": "0x1AB000",
+      "sha256": "4e19f07b14d5eced4b691173f7f04465144f8d4b2c65e7731742d16350729a95",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# -*-coding:utf-8-*-\n\n# this code is currently for python 2.7\nfrom __future__ import print_function\nfrom time import sleep\n\nimport RPi.GPIO as GPIO\nimport smbus"
+    },
+    {
+      "address": "0x1AC000",
+      "sha256": "f04b90a48f786540a813a8cb6d82a52cb6bd5cb2906bae9fc9dfd3ce9ed5537f",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# -*-coding:utf-8-*-\n\n# this code is currently for python 2.7\nfrom __future__ import print_function\nfrom time import sleep\n\nimport RPi.GPIO as GPIO\nimport smbus"
+    },
+    {
+      "address": "0x1AD000",
+      "sha256": "868712198fabf538c8bf1d1d4f8ef689a07181ee3fe9a00a8880b0762c94c277",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000re discarded)\n        reg_INTR1 = self.bus.read_i2c_block_data(self.address, REG_INTR_STATUS_1, 1)\n        reg_INTR2 = self.bus.read_i2c_block_data(self.add"
+    },
+    {
+      "address": "0x1AE000",
+      "sha256": "2d495228162b844924970596ea36c505f23109ab1c0bfb83b8a55e936b5b964f",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000re discarded)\n        reg_INTR1 = self.bus.read_i2c_block_data(self.address, REG_INTR_STATUS_1, 1)\n        reg_INTR2 = self.bus.read_i2c_block_data(self.add"
+    },
+    {
+      "address": "0x1B3000",
+      "sha256": "87aaf84323437d309e18d4f347662193d36e1df2716676db1b1e40cec535ea85",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x1B4000",
+      "sha256": "2c6602e91a81dbc6ec4623e4406ddfec27577516b8abe7918dfe93bce524d053",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x1B5000",
+      "sha256": "6ca114c0404073a7cb5137d1b65891637a6ff4b9c9143fddb648930b5b1b580c",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x1B6000",
+      "sha256": "62eed53106ce386ed72d8c40bec95f290acdcc54bf139adfeccc2cb216dc2ae2",
+      "marker_hits": [
+        "from machine import"
+      ],
+      "printable_ratio": 1.0,
+      "preview": "# This work is a lot based on:\n# - https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library\n#   Written by Peter Jansen and Nathan Seidle (SparkFun)\n#   Thi"
+    },
+    {
+      "address": "0x1B7000",
+      "sha256": "79309ca15c35fcd0771ac0cf1746a79a1692156a46f6047836f6cee3401a5672",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x1B8000",
+      "sha256": "032f274b947ff42bbddd3123d96920a7e58751168e78fe0cea9763cf613ace91",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_WIDTH_411 = 0x03\n\n# LED brightness level. It affects the distance of detection.\nMAX30105_PULSE_AMP_LOWEST = 0x02  # 0.4mA  - Presence detection of ~4 inch\n"
+    },
+    {
+      "address": "0x1B9000",
+      "sha256": "58e10c3eab0790f226d6c9c9e2a7c97da12cd35eab1a7b2a1db312e67ad51b53",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9998,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    },
+    {
+      "address": "0x1BA000",
+      "sha256": "af62a0185921537ba2fe9eab87a9fe2ab7186c44318419e141de1e22433d58f5",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 0.9998,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    },
+    {
+      "address": "0x1BC000",
+      "sha256": "4e37f183326f46e6273237e923460556e66c40632f575669bfdb1e1ec6acacd5",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x1BD000",
+      "sha256": "d6d9a8fa12cb6a5c261f99a4a43e61631edfb126eb0770ed23b72fff2ce9cee5",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x1BE000",
+      "sha256": "d200123790fa5ef4a0f3837e9b38ffda51b0572e4da13911cfd181a06e93637f",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x1BF000",
+      "sha256": "ae0d0120708d44ec04c1b068d8200baae7fd817749699dd53e3664fee9be16b2",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000ble the new FIFO data ready interrupt (datasheet pag. 13)\n        self.bitmask(MAX30105_INT_ENABLE_1, MAX30105_INT_DATA_RDY_MASK, MAX30105_INT_DATA_RDY_"
+    },
+    {
+      "address": "0x1C1000",
+      "sha256": "f46cd75f23e155c0bffb7a15bf1acdf438b109d21497fe6b3238f4cf3bb025b3",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x1C2000",
+      "sha256": "46a34431ee25cbeb569727a06da7fda5075f1505f2441a09741325a3169f8d52",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x1C3000",
+      "sha256": "a86482a5a79ee11a959b9724b211a4c793b0e33a40e324ed55ea35447426d1f6",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x1C4000",
+      "sha256": "1bf22fdec9e71fd820c02ba04da325484926b5ee8f5323cc00e5415de312ba89",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000_ADC_RANGE_4096\n        elif ADC_range == 8192:\n            r = MAX30105_ADC_RANGE_8192\n        elif ADC_range == 16384:\n            r = MAX30105_ADC_RANGE_"
+    },
+    {
+      "address": "0x1C6000",
+      "sha256": "4405e4fd276e5840690ce71cd9488494f5b8dab9739dadce656ab7d4d38ce862",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9971,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000�\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x1C7000",
+      "sha256": "2510000e3b60c2a2825d4a89e003724c351b2dd87339abdac3bf756cb218d818",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9971,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000�\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x1C8000",
+      "sha256": "24ffed1acb2348fd49a520c3d3c684f723bf5d13a6b10f939619bf23e8f567ae",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9971,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000�\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x1C9000",
+      "sha256": "3f5d2d54c9c17532df3a14ef562db2356cef964801e2d6da508cce5454ddd096",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.9971,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000�\u0000\u0000\u0000            ns = MAX30105_SAMPLE_AVG_4\n        elif number_of_samples == 8:\n            ns = MAX30105_SAMPLE_AVG_8\n        elif number_of_samples =="
+    },
+    {
+      "address": "0x1CB000",
+      "sha256": "6703966e9dad614f91049ae952e4390dec323f3ae4e195784245342552940639",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x1CC000",
+      "sha256": "46ccea2949a908ef83de41e63c5eb3fac942639d51707817425792fc194c91f9",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x1CD000",
+      "sha256": "238fbc1cd8fd2ab0d8cbcca9b58ab1e17ccb027a9613e6ef08b5dbec868c11c3",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x1CE000",
+      "sha256": "f3d421df3f8555d8dd39d8f0304f4bfd038a27e03f640358576d8f8ac2d39ad5",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.999,
+      "preview": "�\u0000\u0000\u0000        # Load the Revision ID from the register\n        rev_id = self.i2c_read_register(MAX30105_REVISION_ID)\n        return ord(rev_id)\n\n    # Time slots "
+    },
+    {
+      "address": "0x1D0000",
+      "sha256": "8338b068f1ca16ed7459aa3ec9269a8791e786b3969820035686760d4e5657a1",
+      "marker_hits": [
+        "def "
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x1D1000",
+      "sha256": "d1842be54919b3730fbfd2634e67b4c048adc14e35e3aba7436de9e5335d9aa6",
+      "marker_hits": [
+        "def ",
+        "while True:"
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x1D2000",
+      "sha256": "034b50ef55131a05787fdfe9e7baa5b79c9fd6fa1c598fade61cdd4fc7569c94",
+      "marker_hits": [
+        "def ",
+        "while True:"
+      ],
+      "printable_ratio": 0.998,
+      "preview": "�\u0000\u0000\u0000�\u0000\u0000\u0000    # (useless - for comparison purposes only)\n    def next_sample(self):\n        if self.available():\n            # With respect to the SparkFun librar"
+    },
+    {
+      "address": "0x1D3000",
+      "sha256": "3d1af06e53736f4c482949b228d7bd8aadd4cd7f07b1139a502dc91591c2b2b4",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    },
+    {
+      "address": "0x1D4000",
+      "sha256": "4a227ce98273575a79e9e94056bd62bf083657c5705755002255dd7831f66b4a",
+      "marker_hits": [
+        "def ",
+        "class "
+      ],
+      "printable_ratio": 1.0,
+      "preview": "from ucollections import deque\n\n\nclass CircularBuffer(object):\n    ''' Very simple implementation of a circular buffer based on deque '''\n    def __init__(self,"
+    }
+  ],
+  "artifacts": {
+    "restorable_full_flash": "firmware-full.bin",
+    "raw_littlefs_partition": "filesystem-littlefs.bin",
+    "filesystem_logical_recovery_report": "recovery-report.json"
+  }
+}
