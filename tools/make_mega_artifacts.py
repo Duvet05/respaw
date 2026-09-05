@@ -9,7 +9,12 @@ from pathlib import Path
 import shutil
 
 
-ROOT = Path("/Users/duvet05/Development/hardware-recovery-2026-09-05/mega2560")
+REPOSITORY = Path(__file__).resolve().parents[1]
+ROOT = REPOSITORY / "mega2560"
+CAPTURES = ROOT / "captures"
+FIRMWARE = ROOT / "firmware"
+ANALYSIS = ROOT / "analysis"
+REPORTS = ROOT / "reports"
 FLASH_SIZE = 262_144
 EEPROM_SIZE = 4_096
 BOOT_START = 0x3E000
@@ -61,10 +66,10 @@ def ascii_strings(data: bytes, minimum: int = 5) -> list[dict[str, object]]:
 
 
 def main() -> int:
-    flash1 = (ROOT / "flash-pass1.bin").read_bytes()
-    flash2 = (ROOT / "flash-pass2.bin").read_bytes()
-    eeprom1 = (ROOT / "eeprom-pass1.bin").read_bytes()
-    eeprom2 = (ROOT / "eeprom-pass2.bin").read_bytes()
+    flash1 = (CAPTURES / "flash-pass1.bin").read_bytes()
+    flash2 = (CAPTURES / "flash-pass2.bin").read_bytes()
+    eeprom1 = (CAPTURES / "eeprom-pass1.bin").read_bytes()
+    eeprom2 = (CAPTURES / "eeprom-pass2.bin").read_bytes()
 
     if len(flash2) != FLASH_SIZE:
         raise RuntimeError(f"Second flash read has {len(flash2)} bytes, expected {FLASH_SIZE}")
@@ -80,27 +85,27 @@ def main() -> int:
     memory_names = ("lock", "lfuse", "hfuse", "efuse")
     configuration: dict[str, str] = {}
     for name in memory_names:
-        first = (ROOT / f"{name}-pass1.bin").read_bytes()
-        second = (ROOT / f"{name}-pass2.bin").read_bytes()
+        first = (CAPTURES / f"{name}-pass1.bin").read_bytes()
+        second = (CAPTURES / f"{name}-pass2.bin").read_bytes()
         if len(first) != 1 or first != second:
             raise RuntimeError(f"Duplicate {name} verification failed")
         configuration[name] = f"0x{second[0]:02X}"
 
-    canonical_flash = ROOT / "firmware-full.bin"
-    canonical_eeprom = ROOT / "eeprom.bin"
-    shutil.copyfile(ROOT / "flash-pass2.bin", canonical_flash)
-    shutil.copyfile(ROOT / "eeprom-pass2.bin", canonical_eeprom)
-    write_ihex(ROOT / "firmware-full.hex", flash2, skip_erased=False)
-    write_ihex(ROOT / "firmware-programmed-only.hex", flash2, skip_erased=True)
-    write_ihex(ROOT / "application-only.hex", flash2[:BOOT_START], skip_erased=True)
-    write_ihex(ROOT / "eeprom.hex", eeprom2, skip_erased=False)
+    canonical_flash = FIRMWARE / "firmware-full.bin"
+    canonical_eeprom = FIRMWARE / "eeprom.bin"
+    shutil.copyfile(CAPTURES / "flash-pass2.bin", canonical_flash)
+    shutil.copyfile(CAPTURES / "eeprom-pass2.bin", canonical_eeprom)
+    write_ihex(FIRMWARE / "firmware-full.hex", flash2, skip_erased=False)
+    write_ihex(FIRMWARE / "firmware-programmed-only.hex", flash2, skip_erased=True)
+    write_ihex(FIRMWARE / "application-only.hex", flash2[:BOOT_START], skip_erased=True)
+    write_ihex(FIRMWARE / "eeprom.hex", eeprom2, skip_erased=False)
 
     application = flash2[:BOOT_START]
     bootloader = flash2[BOOT_START:]
     application_non_erased = [i for i, byte in enumerate(application) if byte != 0xFF]
     bootloader_non_erased = [i for i, byte in enumerate(bootloader) if byte != 0xFF]
     strings = ascii_strings(flash2)
-    (ROOT / "printable-strings.json").write_text(
+    (ANALYSIS / "printable-strings.json").write_text(
         json.dumps(strings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
@@ -135,21 +140,21 @@ def main() -> int:
             "configuration_passes_match": True,
         },
         "artifacts": {
-            "restorable_raw_flash": canonical_flash.name,
-            "restorable_full_intel_hex": "firmware-full.hex",
-            "compact_full_intel_hex": "firmware-programmed-only.hex",
-            "application_only_intel_hex": "application-only.hex",
-            "restorable_raw_eeprom": canonical_eeprom.name,
-            "restorable_eeprom_intel_hex": "eeprom.hex",
-            "printable_strings": "printable-strings.json",
+            "restorable_raw_flash": str(canonical_flash.relative_to(ROOT)),
+            "restorable_full_intel_hex": "firmware/firmware-full.hex",
+            "compact_full_intel_hex": "firmware/firmware-programmed-only.hex",
+            "application_only_intel_hex": "firmware/application-only.hex",
+            "restorable_raw_eeprom": str(canonical_eeprom.relative_to(ROOT)),
+            "restorable_eeprom_intel_hex": "firmware/eeprom.hex",
+            "printable_strings": "analysis/printable-strings.json",
         },
         "limitations": [
             "Compiled AVR flash does not contain original comments or most source-level names.",
             "The exact original .ino/.cpp source cannot be reconstructed bit-for-bit from this image.",
         ],
     }
-    candidate_source = ROOT / "source-candidate" / "FINAL_FINAL_FINAL_TESIS_AMIR_FLORES.ino"
-    comparison_report = ROOT / "source-candidate" / "firmware-string-comparison.json"
+    candidate_source = ROOT / "source" / "tesis-mega2560" / "tesis-mega2560.ino"
+    comparison_report = ANALYSIS / "firmware-string-comparison.json"
     if candidate_source.exists():
         source_bytes = candidate_source.read_bytes()
         candidate_details: dict[str, object] = {
@@ -165,7 +170,7 @@ def main() -> int:
             candidate_details["distinct_literals_compared"] = comparison.get("distinct_literals_compared")
             candidate_details["all_compared_literals_match"] = comparison.get("all_compared_literals_match")
         report["source_candidate"] = candidate_details
-    (ROOT / "recovery-report.json").write_text(
+    (REPORTS / "recovery-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))

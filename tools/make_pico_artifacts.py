@@ -10,7 +10,12 @@ from pathlib import Path
 import shutil
 
 
-ROOT = Path("/Users/duvet05/Development/hardware-recovery-2026-09-05/pico")
+REPOSITORY = Path(__file__).resolve().parents[1]
+ROOT = REPOSITORY / "pico"
+CAPTURES = ROOT / "captures"
+FIRMWARE = ROOT / "firmware"
+REPORTS = ROOT / "reports"
+SOURCE = ROOT / "source"
 FLASH_SIZE = 2 * 1024 * 1024
 FILESYSTEM_START = 0x12C000
 FILESYSTEM_END = 0x200000
@@ -31,22 +36,22 @@ def utf8_prefix_before_erased(data: bytes, start: int) -> bytes:
 
 
 def main() -> int:
-    first = (ROOT / "flash-pass1.bin").read_bytes()
-    second = (ROOT / "flash-pass2.bin").read_bytes()
+    first = (CAPTURES / "flash-pass1.bin").read_bytes()
+    second = (CAPTURES / "flash-pass2.bin").read_bytes()
     if len(first) != FLASH_SIZE or len(second) != FLASH_SIZE:
         raise RuntimeError("Unexpected RP2040 flash image size")
     if first != second:
         raise RuntimeError("The two Pico flash reads differ")
 
-    shutil.copyfile(ROOT / "flash-pass2.bin", ROOT / "firmware-full.bin")
+    shutil.copyfile(CAPTURES / "flash-pass2.bin", FIRMWARE / "firmware-full.bin")
     filesystem = second[FILESYSTEM_START:FILESYSTEM_END]
-    (ROOT / "filesystem-littlefs.bin").write_bytes(filesystem)
+    (FIRMWARE / "filesystem-littlefs.bin").write_bytes(filesystem)
 
     recovered = utf8_prefix_before_erased(second, DELETED_SOURCE_START)
     parsed = ast.parse(recovered.decode("utf-8"), filename="recovered_source_0x1A9000.py")
     if not parsed.body:
         raise RuntimeError("Recovered source parsed but was empty")
-    recovered_dir = ROOT / "recovered-deleted"
+    recovered_dir = SOURCE / "recovered-deleted"
     recovered_dir.mkdir(parents=True, exist_ok=True)
     source_path = recovered_dir / "recovered_source_0x1A9000.py"
     source_path.write_bytes(recovered)
@@ -117,12 +122,12 @@ def main() -> int:
         },
         "source_like_flash_pages": page_candidates,
         "artifacts": {
-            "restorable_full_flash": "firmware-full.bin",
-            "raw_littlefs_partition": "filesystem-littlefs.bin",
-            "filesystem_logical_recovery_report": "recovery-report.json",
+            "restorable_full_flash": "firmware/firmware-full.bin",
+            "raw_littlefs_partition": "firmware/filesystem-littlefs.bin",
+            "filesystem_logical_recovery_report": "reports/logical-recovery-report.json",
         },
     }
-    (ROOT / "forensic-report.json").write_text(
+    (REPORTS / "forensic-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))

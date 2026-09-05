@@ -4,6 +4,27 @@ Captura realizada el 5 de septiembre de 2026. Todas las operaciones sobre las
 placas fueron de lectura. Las memorias se leyeron dos veces y las copias fueron
 comparadas antes de generar los artefactos canónicos.
 
+## Organización del repositorio
+
+Cada dispositivo sigue la misma separación para distinguir evidencia original
+de archivos derivados:
+
+```text
+docs/                 Tesis y contraste técnico
+mega2560/
+  captures/           Lecturas originales de flash, EEPROM, fuses y serie
+  firmware/           Imágenes canónicas restaurables
+  analysis/           Desensamblados, cadenas y comparaciones
+  reports/            Informes de recuperación
+  source/             Fuente candidata y su procedencia
+pico/
+  captures/           Dos lecturas originales de la flash
+  firmware/           Imagen completa y partición LittleFS
+  reports/            Informes lógico y forense
+  source/             Archivos visibles y código borrado recuperado
+tools/                 Utilidades reproducibles de recuperación y análisis
+```
+
 ## Resultado breve
 
 ### Raspberry Pi Pico W
@@ -19,18 +40,18 @@ comparadas antes de generar los artefactos canónicos.
 - Actualmente no hay `main.py` ni `boot.py`.
 - La búsqueda forense halló un script Python borrado completo en el offset de
   flash `0x1A9000`. Se conservó byte por byte como
-  `pico/recovered-deleted/recovered_source_0x1A9000.py`. El nombre original ya
+  `pico/source/recovered-deleted/recovered_source_0x1A9000.py`. El nombre original ya
   no estaba disponible; por su contenido parece un `main.py` de prueba del
   MAX30102. El archivo recuperado es UTF-8 y su sintaxis Python es válida.
 
 Artefactos principales:
 
-- `pico/firmware-full.bin`: imagen restaurable de los 2 MiB completos.
-- `pico/filesystem-littlefs.bin`: partición LittleFS cruda de 848 KiB.
-- `pico/max30102/`: archivos fuente que aún eran visibles.
-- `pico/recovered-deleted/`: fuente tallada desde espacio borrado.
-- `pico/recovery-report.json`: recuperación lógica, archivo por archivo.
-- `pico/forensic-report.json`: datos de flash y evidencia forense.
+- `pico/firmware/firmware-full.bin`: imagen restaurable de los 2 MiB completos.
+- `pico/firmware/filesystem-littlefs.bin`: partición LittleFS cruda de 848 KiB.
+- `pico/source/current/max30102/`: archivos fuente que aún eran visibles.
+- `pico/source/recovered-deleted/`: fuente tallada desde espacio borrado.
+- `pico/reports/logical-recovery-report.json`: recuperación lógica, archivo por archivo.
+- `pico/reports/forensic-report.json`: datos de flash y evidencia forense.
 
 ### Arduino Mega 2560
 
@@ -55,27 +76,27 @@ clasificación `ESTRESADO / ANSIOSO`, `NEUTRO` o `RELAJADO`, hibernación y env�
 de resultados al Pico W.
 
 Posteriormente se recibió el sketch
-`mega2560/source-candidate/FINAL_FINAL_FINAL_TESIS_AMIR_FLORES.ino`. Sus 17
+`mega2560/source/tesis-mega2560/tesis-mega2560.ino`. Sus 17
 cadenas literales significativas aparecen exactamente en la flash recuperada,
 lo que lo identifica con alta confianza como la misma versión o una versión
 muy cercana. La comparación reproducible está en
-`mega2560/source-candidate/firmware-string-comparison.json` y el cruce con la
-tesis en `docs/thesis-cross-check.md`.
+`mega2560/analysis/firmware-string-comparison.json` y el cruce con la tesis en
+`docs/comparacion-tesis-firmware.md`. El documento original se conserva como
+`docs/tesis-amir-flores.pdf`.
 
 Artefactos principales:
 
-- `mega2560/firmware-full.bin`: flash exacta, incluida la zona del bootloader.
-- `mega2560/firmware-full.hex`: representación Intel HEX completa.
-- `mega2560/application-only.hex`: aplicación sin la región del bootloader,
+- `mega2560/firmware/firmware-full.bin`: flash exacta, incluida la zona del bootloader.
+- `mega2560/firmware/firmware-full.hex`: representación Intel HEX completa.
+- `mega2560/firmware/application-only.hex`: aplicación sin la región del bootloader,
   adecuada para una eventual restauración por el bootloader USB.
-- `mega2560/eeprom.bin` y `mega2560/eeprom.hex`: copia de EEPROM.
-- `mega2560/application-disassembly.txt`: desensamblado AVR de la aplicación.
-- `mega2560/analyzed-functions.json`: 144 funciones detectadas por análisis.
-- `mega2560/printable-strings.json`: cadenas con sus offsets.
-- `mega2560/recovery-report.json`: tamaños, hashes y verificaciones.
-- `mega2560/source-candidate/`: sketch recibido, procedencia y comparación con
-  la flash.
-- `docs/thesis-cross-check.md`: correspondencias, diferencias y riesgos frente
+- `mega2560/firmware/eeprom.bin` y `mega2560/firmware/eeprom.hex`: copia de EEPROM.
+- `mega2560/analysis/application-disassembly.txt`: desensamblado AVR de la aplicación.
+- `mega2560/analysis/analyzed-functions.json`: 144 funciones detectadas por análisis.
+- `mega2560/analysis/printable-strings.json`: cadenas con sus offsets.
+- `mega2560/reports/recovery-report.json`: tamaños, hashes y verificaciones.
+- `mega2560/source/`: sketch recibido y documentación de procedencia.
+- `docs/comparacion-tesis-firmware.md`: correspondencias, diferencias y riesgos frente
   a la arquitectura descrita en la tesis.
 
 ## Límite de la recuperación de fuente

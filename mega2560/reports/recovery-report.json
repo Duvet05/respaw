@@ -1,0 +1,63 @@
+{
+  "device": "Arduino Mega 2560 / ATmega2560",
+  "signature": "1E 98 01",
+  "port_at_capture": "/dev/cu.usbmodem114301",
+  "usb": {
+    "vid": "2341",
+    "pid": "0042",
+    "serial": "55139313435351E0E1C1"
+  },
+  "bootloader_protocol": "Wiring / STK500v2",
+  "bootloader_reported_version": "2.10",
+  "memory": {
+    "flash_bytes": 262144,
+    "flash_sha256": "5a3b46f582fbc4a8cf873e60cab9af3459ffd50cd8bf9f1813a1cb9360d57da2",
+    "eeprom_bytes": 4096,
+    "eeprom_sha256": "f47a8ec3e9aff2318d896942282ad4fe37d6391c82914f54a5da8a37de1300c6",
+    "eeprom_non_erased_bytes": 0,
+    "application_region": "0x00000-0x3DFFF",
+    "application_last_non_erased": "0x0877D",
+    "application_non_erased_bytes": 34310,
+    "bootloader_region": "0x3E000-0x3FFFF",
+    "bootloader_last_non_erased": "0x3FD1D",
+    "bootloader_non_erased_bytes": 7381
+  },
+  "configuration": {
+    "lock": "0xCF",
+    "lfuse": "0xFF",
+    "hfuse": "0xD8",
+    "efuse": "0xFD"
+  },
+  "verification": {
+    "flash_pass1_bytes": 261406,
+    "flash_pass2_bytes": 262144,
+    "flash_pass1_matches_pass2_prefix": true,
+    "flash_pass2_extra_bytes": 738,
+    "flash_pass2_extra_bytes_are_all_FF": true,
+    "eeprom_passes_match": true,
+    "configuration_passes_match": true
+  },
+  "artifacts": {
+    "restorable_raw_flash": "firmware/firmware-full.bin",
+    "restorable_full_intel_hex": "firmware/firmware-full.hex",
+    "compact_full_intel_hex": "firmware/firmware-programmed-only.hex",
+    "application_only_intel_hex": "firmware/application-only.hex",
+    "restorable_raw_eeprom": "firmware/eeprom.bin",
+    "restorable_eeprom_intel_hex": "firmware/eeprom.hex",
+    "printable_strings": "analysis/printable-strings.json"
+  },
+  "limitations": [
+    "Compiled AVR flash does not contain original comments or most source-level names.",
+    "The exact original .ino/.cpp source cannot be reconstructed bit-for-bit from this image."
+  ],
+  "source_candidate": {
+    "artifact": "source/tesis-mega2560/tesis-mega2560.ino",
+    "sha256": "73999c29e14e43f8dec78f26db58ddee244fc85c097a51a3293a7436a1a1f401",
+    "bytes": 22497,
+    "status": "high-confidence candidate; exact build identity not proven",
+    "string_comparison_artifact": "analysis/firmware-string-comparison.json",
+    "matched_literals": 17,
+    "distinct_literals_compared": 17,
+    "all_compared_literals_match": true
+  }
+}
