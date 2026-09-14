@@ -104,9 +104,12 @@ Verificación de esta versión en la Mac, 14/09/2026:
   sanitizadores, además de JavaScript y comprobación del diff.
 - SHA-256 del HEX generado fuera del repositorio:
   `767f9a66be6d8810e6c21035b1b83e07b752d38f589cc5d3617350bd8d445a90`.
-- **No cargado en la placa**: el Mega conserva `respaw-v2`, que usa la web.
-  La TFT está desconectada y falta verificar físicamente el circuito del FSR.
-  Tampoco se han comprobado tiempos, legibilidad ni gestos en ese montaje.
+- **Cargado en el Mega el 14/09/2026**, con respaldo previo y verificación del
+  programa mediante lectura independiente. El bootloader, la EEPROM y la
+  configuración se conservaron. La [verificación con la placa](../../../docs/verificacion-autonomo-2026-09-14.md)
+  documenta las comprobaciones y sus límites.
+- La TFT está desconectada y falta verificar físicamente el circuito del FSR.
+  La legibilidad y los gestos en ese montaje siguen pendientes.
 
 ## Diagnóstico por USB (opcional)
 
