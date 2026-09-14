@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: run test check firmware
+.PHONY: run test check firmware firmware-autonomous
 run:
 	PYTHONPATH=companion $(PYTHON) -m respaw
 
@@ -13,3 +13,6 @@ check: test
 
 firmware:
 	sh tools/arduino.sh compile --profile mega mega2560/source/respaw-v2
+
+firmware-autonomous:
+	sh tools/arduino.sh compile --profile mega mega2560/source/respaw-autonomo

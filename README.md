@@ -12,6 +12,13 @@ TFT de 3,5 pulgadas y del hardware del robot.
 - [Mejoras de conversación y memoria semántica](docs/mejoras-memoria.md)
 - [Firmware Mega v2 y protocolo USB](mega2560/source/respaw-v2/README.md)
 - [Receptor Pico W y cableado con el Mega](pico/source/respaw-v2/README.md)
+- [Acompañamiento autónomo con Mega, pantalla y presión](mega2560/source/respaw-autonomo/README.md)
+
+Para funcionar sin una computadora, el firmware **respaw-autonomo** ofrece
+opciones por presión y aprende preferencias guardadas en la EEPROM del Mega.
+Es acompañamiento guiado con texto en la TFT; la conversación libre de la web
+sigue necesitando una computadora. La guía del firmware autónomo explica el
+montaje, la interacción y sus límites.
 
 Con el modelo local preparado y Ollama iniciado:
 
