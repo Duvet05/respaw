@@ -1,0 +1,12 @@
+profiles:
+  mega:
+    fqbn: arduino:avr:mega:cpu=atmega2560
+    platforms:
+      - platform: arduino:avr (1.8.6)
+    libraries:
+      - SparkFun MAX3010x Pulse and Proximity Sensor Library (1.1.2)
+      - Adafruit GFX Library (1.12.6)
+      - Adafruit BusIO (1.17.4)
+      - MCUFRIEND_kbv (3.0.0-Release)
+      - DFRobotDFPlayerMini (1.0.6)
+default_profile: mega
