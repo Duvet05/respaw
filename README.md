@@ -1,4 +1,39 @@
-# Recuperación de Raspberry Pi Pico W y Arduino Mega 2560
+# ResPaw: conversación y memoria local
+
+Primera versión de un acompañante que conversa en español, recupera recuerdos
+autorizados entre sesiones y permite corregirlos u olvidarlos. La conversación
+se ejecuta en el Mac con Ollama; el Mega 2560 conserva el control de la pantalla
+TFT de 3,5 pulgadas y del hardware del robot.
+
+- [Uso y arquitectura del acompañante offline](docs/offline-companion.md)
+- [Estado del arte y decisiones de memoria/RAG](docs/estado-del-arte-2026.md)
+- [Resultados de verificación local](docs/verificacion-local-2026-09-13.md)
+- [Carga y verificación del Mega por USB](docs/verificacion-hardware-2026-09-14.md)
+- [Mejoras de conversación y memoria semántica](docs/mejoras-memoria.md)
+- [Firmware Mega v2 y protocolo USB](mega2560/source/respaw-v2/README.md)
+- [Receptor Pico W y cableado con el Mega](pico/source/respaw-v2/README.md)
+
+Con el modelo local preparado y Ollama iniciado:
+
+```sh
+make run
+```
+
+Abrir http://127.0.0.1:8765. El modo predeterminado simula la pantalla y no abre
+ningún puerto USB. El modo invitado conserva la conversación solo en memoria
+durante la sesión. Un perfil permite guardar mensajes propios mediante
+«Recordar este mensaje» y recuperarlos en una conversación posterior.
+
+```sh
+make check       # Python, integración HTTP local, núcleo C++ y sintaxis JavaScript
+make firmware    # Compila para Mega con dependencias fijadas; no carga la placa
+```
+
+La guía explica la preparación inicial de modelos, la voz opcional y el enlace
+USB. La primera preparación necesita Internet; la aplicación no tiene un
+proveedor remoto de conversación ni descarga modelos automáticamente.
+
+## Archivo de recuperación de Pico W y Mega 2560
 
 Captura realizada el 5 de septiembre de 2026. Todas las operaciones sobre las
 placas fueron de lectura. Las memorias se leyeron dos veces y las copias fueron
@@ -34,10 +69,11 @@ tools/                 Utilidades reproducibles de recuperación y análisis
 - La REPL, USB y el modo BOOTSEL funcionan.
 - La flash completa se leyó dos veces con `picotool --verify`; ambas imágenes
   son idénticas.
-- El sistema de archivos actual sólo contiene:
+- El sistema de archivos en la captura original sólo contenía:
   - `max30102/__init__.py`
   - `max30102/circular_buffer.py`
-- Actualmente no hay `main.py` ni `boot.py`.
+- En esa captura no había `main.py` ni `boot.py`. El receptor v2 se instaló
+  posteriormente y se documenta en su guía enlazada arriba.
 - La búsqueda forense halló un script Python borrado completo en el offset de
   flash `0x1A9000`. Se conservó byte por byte como
   `pico/source/recovered-deleted/recovered_source_0x1A9000.py`. El nombre original ya

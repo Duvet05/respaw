@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="respaw-token" content="__CSRF_TOKEN__">
+  <title>ResPaw · Un momento para ti</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">res<span>paw</span><small>un momento para ti</small></a><span class="local-badge">● En tu Mac</span></header>
+  <main>
+    <aside class="presence">
+      <div class="robot neutral" id="face" aria-label="ResPaw"><div class="eyes"><i></i><i></i></div></div>
+      <h1>Podemos ir<br>a tu ritmo.</h1>
+      <p>Habla de lo que tienes en mente.<br>Tú eliges qué recordar para otra ocasión.</p>
+      <label for="profile">¿Quién está aquí?</label>
+      <div class="profile-row"><select id="profile"><option value="">Invitado · sin recuerdos</option></select><button id="create-profile" class="quiet">Nuevo</button></div>
+      <button id="new-session" class="quiet wide">Comenzar otra conversación</button>
+      <label class="check"><input type="checkbox" id="voice"> Leer las respuestas en voz alta</label>
+      <details class="device"><summary>Robot y conexión</summary><p id="model-status">Comprobando el modelo local…</p><p id="memory-status"></p><p id="device-status">Pantalla en modo simulación</p><button id="measure" class="quiet">Medir con el sensor</button><p id="measurement"></p></details>
+    </aside>
+    <section class="conversation" aria-label="Conversación">
+      <div class="conversation-heading"><span>ESTE MOMENTO</span><button id="show-memories" class="quiet">Mis recuerdos <span id="memory-count">0</span></button></div>
+      <div id="messages" class="messages" role="log" aria-live="polite"><div class="welcome"><span class="spark">✳</span><h2>¿Cómo vienes hoy?</h2><p>Puede ser algo pequeño, algo que preocupa<br>o simplemente ganas de conversar.</p></div></div>
+      <div id="notice" role="status"></div>
+      <form id="chat-form"><label class="sr-only" for="message">Tu mensaje</label><textarea id="message" maxlength="2000" rows="2" placeholder="Estoy aquí…" required></textarea><div class="composer-actions"><button id="mic" type="button" class="quiet" disabled>Hablar</button><span id="thinking"></span><button id="stop" type="button" class="quiet">Detener</button><button id="send" type="submit" class="primary">Enviar ↗</button></div></form>
+      <p class="privacy">La conversación queda en esta sesión. Solo se conservan los mensajes que marques «Recordar».</p>
+    </section>
+  </main>
+  <dialog id="memories-dialog"><div class="dialog-heading"><h2>Lo que elegiste recordar</h2><button id="close-memories" class="quiet" aria-label="Cerrar recuerdos">Cerrar</button></div><p>Un episodio cuenta algo que te pasó. Una preferencia indica cómo quieres que te acompañe, por ejemplo, escuchar sin proponer ejercicios. Puedes corregirlos, pausarlos u olvidarlos.</p><div id="memories-list"></div><button id="forget-all" class="danger">Olvidar todos los recuerdos</button></dialog>
+  <dialog id="profile-dialog"><form id="profile-form"><h2>Un espacio para ti</h2><label for="profile-name">Nombre o apodo</label><input id="profile-name" maxlength="80" required autocomplete="off"><div class="dialog-actions"><button id="cancel-profile" type="button" class="quiet">Cancelar</button><button class="primary">Crear perfil</button></div></form></dialog>
+</body>
+</html>
