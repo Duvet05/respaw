@@ -1,0 +1,10 @@
+profiles:
+  mega:
+    fqbn: arduino:avr:mega:cpu=atmega2560
+    platforms:
+      - platform: arduino:avr (1.8.6)
+    libraries:
+      - Adafruit GFX Library (1.12.6)
+      - Adafruit BusIO (1.17.4)
+      - MCUFRIEND_kbv (3.0.0-Release)
+default_profile: mega

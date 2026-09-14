@@ -5,6 +5,12 @@ archivo recuperado de ResPaw. La Mac ejecuta el modelo y conserva la memoria. El
 Mega 2560 controla la TFT de 3,5 pulgadas, el MAX30102, el FSR y el DFPlayer. El
 Pico no es necesario para probar esta primera versión.
 
+**Offline no significa que este modelo corra dentro del Mega.** Esta web usa la
+Mac. Para el objetivo de no añadir hardware ni depender de ella, se incorpora un
+[firmware autónomo](../mega2560/source/respaw-autonomo/README.md) con interacción
+por presión, indicaciones en la TFT y preferencias persistentes. Ese firmware
+ofrece acompañamiento guiado; no ejecuta el modelo de conversación.
+
 El [receptor del Pico W](../pico/source/respaw-v2/README.md) está disponible como
 componente opcional: recibe telemetría del Mega por UART y permite observarla
 en su consola USB. Requiere cableado entre placas con adaptación de nivel de

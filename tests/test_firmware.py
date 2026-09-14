@@ -8,6 +8,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FirmwareTests(unittest.TestCase):
+    def test_standalone_learning_memory_and_gestures_with_sanitizers(self):
+        compiler = shutil.which("c++")
+        self.assertIsNotNone(compiler, "Instala las herramientas C++ para verificar el firmware.")
+        with tempfile.TemporaryDirectory(prefix="respaw-autonomy-") as temp:
+            target = Path(temp) / "autonomy-test"
+            subprocess.run([compiler, "-std=c++11", "-Wall", "-Wextra", "-Werror",
+                            "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
+                            "-I", str(ROOT / "mega2560/source/respaw-autonomo"),
+                            str(ROOT / "tests/autonomy_core_test.cpp"), "-o", str(target)], check=True)
+            subprocess.run([str(target)], check=True, timeout=10)
+
     def test_portable_firmware_core_with_sanitizers(self):
         compiler = shutil.which("c++")
         self.assertIsNotNone(compiler, "Instala las herramientas C++ para verificar el firmware.")
