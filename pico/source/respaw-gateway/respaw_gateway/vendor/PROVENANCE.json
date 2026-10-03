@@ -1,0 +1,29 @@
+{
+  "aiohttp_ws": {
+    "repository": "https://github.com/micropython/micropython-lib",
+    "commit": "220ca9de9af63589cf5f372dcd12d7c272e54584",
+    "upstream_path": "python-ecosys/aiohttp/aiohttp/aiohttp_ws.py",
+    "manifest_version": "0.0.8",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2023 Carlos Gil",
+    "upstream_sha256": "e1a8ac3d1a7023108d12075f10039206ab564bd84a63acb3f5819d42a73de7bb",
+    "changes": [
+      "MicroPython-compatible URL regex with exact consumption",
+      "512-byte frame bound before allocation, 125-byte control frame bound",
+      "Reject fragmentation, masked server frames, unknown opcodes and reserved extension bits",
+      "Bounded HTTP response parsing and Sec-WebSocket-Accept validation",
+      "No browser Origin; require no unsolicited extensions or subprotocol",
+      "Use os.urandom for masking and upgrade key",
+      "Consume Ping/Pong internally",
+      "Close and await underlying stream for cleanup"
+    ]
+  },
+  "ntptime": {
+    "repository": "https://github.com/micropython/micropython-lib",
+    "commit": "5139530d3327a6012921c70d44ae3151480efe2d",
+    "upstream_path": "micropython/net/ntptime/ntptime.py",
+    "license": "MIT",
+    "sha256": "aeae0fffa28a0a18bf2975f9140ab58af43b04e555d772ddc97601e209744c13",
+    "changes": []
+  }
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=ResPaw authenticated Pico WebSocket link
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/respaw/current
+EnvironmentFile=%h/.local/state/respaw/link.env
+ExecStart=%h/.local/share/respaw/venv-link/bin/python tools/robot_link_server.py --host 127.0.0.1 --port 8766 --operator-port 8767 --token-file %h/.local/state/respaw/link.token --robot-id ${RESPAW_ROBOT_ID}
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

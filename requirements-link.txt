@@ -1,0 +1,2 @@
+# Optional Pico network link; the offline companion has no new dependency.
+websockets==15.0.1

@@ -1,5 +1,9 @@
 # Cruce entre tesis, fuente candidata y firmware recuperado
 
+Este informe describe la **captura original** del 5 de septiembre de 2026 y el
+sketch de tesis. El receptor v2 del Pico se instaló después; el estado actual y
+la arquitectura objetivo están en [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Documento consultado
 
 - Archivo conservado: [`tesis-amir-flores.pdf`](tesis-amir-flores.pdf)

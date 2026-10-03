@@ -71,7 +71,26 @@ class RawRepl:
         return self._read_until(b"raw REPL; CTRL-B to exit\r\n>", 5.0)
 
     def exec(self, source: str, timeout: float = 10.0) -> tuple[bytes, bytes]:
-        os.write(self.fd, source.encode("utf-8") + b"\x04")
+        # RP2040's raw-REPL input ring is small and has no flow control. Large
+        # writes can drop the end of a program, including its Ctrl-D. Pace
+        # chunks like pyboard.py and handle partial nonblocking host writes.
+        encoded = source.encode("utf-8")
+        deadline = time.monotonic() + timeout
+        for start in range(0, len(encoded), 128):
+            chunk = memoryview(encoded)[start:start + 128]
+            while chunk:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Timeout writing raw-REPL source")
+                try:
+                    written = os.write(self.fd, chunk)
+                except BlockingIOError:
+                    written = 0
+                if written:
+                    chunk = chunk[written:]
+                else:
+                    select.select([], [self.fd], [], 0.02)
+            time.sleep(0.01)
+        os.write(self.fd, b"\x04")
         response = self._read_until(b"\x04>", timeout)
         if not response.startswith(b"OK"):
             raise RuntimeError(f"Unexpected raw-REPL response: {response[:200]!r}")

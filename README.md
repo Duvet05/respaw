@@ -1,6 +1,17 @@
-# ResPaw: conversación y memoria local
+# ResPaw: robot, conversación y memoria
 
-Primera versión de un acompañante que conversa en español, recupera recuerdos
+La arquitectura objetivo separa **Mega = cuerpo**, **Pico W = conectividad** y
+**ResPaw Server/Companion = conversación y memoria**. El servidor puede alojarse
+en una Raspberry y usar un modelo local o, con un proveedor configurado, uno en
+nube. El código actual y las conexiones pendientes se distinguen en estas guías:
+
+- [Arquitectura, responsabilidades y protocolo](docs/ARCHITECTURE.md)
+- [Roadmap y pruebas de integración](docs/ROADMAP.md)
+- [Servidor de enlace desplegado en Raspberry](docs/server-link.md)
+- [Gateway Wi-Fi y setup desde el celular](pico/source/respaw-gateway/README.md)
+- [Verificación del servidor y del Pico, 3 de octubre](docs/verificacion-enlace-2026-10-03.md)
+
+La primera versión del acompañante conversa en español, recupera recuerdos
 autorizados entre sesiones y permite corregirlos u olvidarlos. La conversación
 se ejecuta en el Mac con Ollama; el Mega 2560 conserva el control de la pantalla
 TFT de 3,5 pulgadas y del hardware del robot.
