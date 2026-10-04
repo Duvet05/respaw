@@ -1,0 +1,18 @@
+ResPaw licensing scope
+
+The MIT license in LICENSE applies to the original ResPaw implementation in:
+
+- companion/respaw/
+- tools/ and tests/
+- mega2560/source/respaw-v2/ and mega2560/source/respaw-autonomo/
+- pico/source/respaw-v2/ and pico/source/respaw-gateway/, except vendor/
+- project build files and documentation authored for this implementation
+
+Third-party components retain their own licenses and copyright notices.
+The MicroPython gateway vendor files are covered by their adjacent LICENSE
+and the copyright notices in their source files. External libraries used by
+the Arduino build retain their respective licenses.
+
+Recovered firmware, flash/EEPROM dumps, original recovered source, the thesis
+sketch and the original thesis/media are recovery evidence. This MIT license
+does not relicense those materials. Their existing notices remain unchanged.

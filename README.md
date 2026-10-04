@@ -1,5 +1,9 @@
 # ResPaw: robot, conversación y memoria
 
+La nueva implementación se publica con [licencia MIT](LICENSE). El
+[alcance de la licencia](NOTICE) conserva las licencias de terceros y no
+relicencia los archivos originales recuperados ni la tesis.
+
 La arquitectura objetivo separa **Mega = cuerpo**, **Pico W = conectividad** y
 **ResPaw Server/Companion = conversación y memoria**. El servidor puede alojarse
 en una Raspberry y usar un modelo local o, con un proveedor configurado, uno en

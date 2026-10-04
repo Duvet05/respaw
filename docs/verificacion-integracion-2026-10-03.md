@@ -17,6 +17,8 @@ El software está integrado; la prueba física completa sigue pendiente.
 - 83 pruebas de enlace, transporte, memoria y APIs pasaron en Python 3.13.5.
   Después se comprobaron también 20 pruebas del proveedor y voz con campos
   de configuración vacíos. Las respuestas de IA y audio de esas pruebas son fixtures.
+  El release de contacto pasó luego 131 pruebas en la Raspberry, incluyendo
+  transporte, respuesta corporal, memoria y API local, con claves vacías.
 
 ## Pico W físico
 
