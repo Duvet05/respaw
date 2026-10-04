@@ -14,16 +14,17 @@ typedef const char *RespawText;
 namespace respaw {
 
 template <typename Output>
-void writeReady(Output &out, bool sensor, bool audio) {
+void writeReady(Output &out, bool sensor, bool audio, bool commands = false) {
   out.print(RESPAW_TEXT("{\"v\":1,\"type\":\"ready\",\"board\":\"mega2560\",\"sensor\":"));
   out.print(sensor ? RESPAW_TEXT("true") : RESPAW_TEXT("false"));
   out.print(RESPAW_TEXT(",\"audio\":"));
   out.print(audio ? RESPAW_TEXT("true") : RESPAW_TEXT("false"));
+  if (commands) out.print(RESPAW_TEXT(",\"commands\":true"));
   out.println('}');
 }
 
 template <typename Output>
-void writeHeartbeat(Output &out, bool sensor, bool audio, bool measuring, uint32_t uptime) {
+void writeHeartbeat(Output &out, bool sensor, bool audio, bool measuring, uint32_t uptime, bool commands = false) {
   out.print(RESPAW_TEXT("{\"v\":1,\"type\":\"heartbeat\",\"board\":\"mega2560\",\"uptime_ms\":"));
   out.print(uptime);
   out.print(RESPAW_TEXT(",\"sensor\":"));
@@ -32,7 +33,35 @@ void writeHeartbeat(Output &out, bool sensor, bool audio, bool measuring, uint32
   out.print(audio ? RESPAW_TEXT("true") : RESPAW_TEXT("false"));
   out.print(RESPAW_TEXT(",\"measuring\":"));
   out.print(measuring ? RESPAW_TEXT("true") : RESPAW_TEXT("false"));
+  if (commands) out.print(RESPAW_TEXT(",\"commands\":true"));
   out.println('}');
+}
+
+template <typename Output>
+void writeContact(Output &out, bool pressed, uint32_t uptime) {
+  out.print(RESPAW_TEXT("{\"v\":1,\"type\":\"contact\",\"sensor\":\"fsr_a8\",\"pressed\":"));
+  out.print(pressed ? RESPAW_TEXT("true") : RESPAW_TEXT("false"));
+  out.print(RESPAW_TEXT(",\"uptime_ms\":")); out.print(uptime);
+  out.println('}');
+}
+
+template <typename Output>
+void writeAck(Output &out, uint16_t id, RespawText command) {
+  out.print(RESPAW_TEXT("{\"v\":1,\"type\":\"ack\",\"id\":")); out.print(id);
+  out.print(RESPAW_TEXT(",\"command\":\"")); out.print(command);
+  out.println(RESPAW_TEXT("\"}"));
+}
+
+template <typename Output>
+void writeError(Output &out, uint16_t id, RespawText reason) {
+  out.print(RESPAW_TEXT("{\"v\":1,\"type\":\"error\",\"id\":")); out.print(id);
+  out.print(RESPAW_TEXT(",\"reason\":\"")); out.print(reason);
+  out.println(RESPAW_TEXT("\"}"));
+}
+
+template <typename Output>
+void writeAnimationDone(Output &out) {
+  out.println(RESPAW_TEXT("{\"v\":1,\"type\":\"animation_done\"}"));
 }
 
 // The caller supplies only fixed firmware reason strings, never serial input.

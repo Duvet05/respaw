@@ -8,6 +8,11 @@ MAX_LINE = 512
 LINK_TIMEOUT_MS = 6000
 CAPTURE_TIMEOUT_MS = 36000
 MEASUREMENT_TTL_MS = 60000
+UART_COMMANDS = ("PING", "STOP", "FACE", "MEASURE", "PLAY")
+UART_ERROR_REASONS = ("bad_command", "bad_id", "unexpected_argument", "unknown_command",
+                      "line_too_long", "bad_face", "bad_track", "controller_required",
+                      "controller_busy", "busy", "sensor_unavailable", "no_contact",
+                      "audio_unavailable", "host_timeout", "audio_timeout")
 
 try:
     ticks_diff = time.ticks_diff
@@ -61,11 +66,31 @@ def parse_frame(line):
             raise ValueError("bad_capabilities")
         result = {"v": 1, "type": kind, "board": "mega2560",
                   "sensor": event["sensor"], "audio": event["audio"]}
+        if "commands" in event:
+            if type(event["commands"]) is not bool:
+                raise ValueError("bad_commands_capability")
+            result["commands"] = event["commands"]
         if kind == "heartbeat":
             if not integer(event.get("uptime_ms"), 0, 0xFFFFFFFF) or type(event.get("measuring")) is not bool:
                 raise ValueError("bad_heartbeat")
             result.update(uptime_ms=event["uptime_ms"], measuring=event["measuring"])
         return result
+    if kind == "contact":
+        if (set(event) != {"v", "type", "sensor", "pressed", "uptime_ms"}
+                or event["sensor"] != "fsr_a8" or type(event["pressed"]) is not bool
+                or not integer(event["uptime_ms"], 0, 0xFFFFFFFF)):
+            raise ValueError("bad_contact")
+        return event
+    if kind == "ack":
+        if (set(event) != {"v", "type", "id", "command"}
+                or not integer(event["id"], 1, 65535) or event["command"] not in UART_COMMANDS):
+            raise ValueError("bad_ack")
+        return event
+    if kind == "error":
+        if (set(event) != {"v", "type", "id", "reason"}
+                or not integer(event["id"], 0, 65535) or event["reason"] not in UART_ERROR_REASONS):
+            raise ValueError("bad_error")
+        return event
     if kind != "measurement" or type(event.get("valid")) is not bool:
         raise ValueError("bad_type")
     for key, high in (("rr_count", 128), ("rmssd_pairs", 127), ("rejected", 65535), ("window_ms", 60000)):
@@ -106,18 +131,23 @@ class Receiver:
         self.capabilities = None
         self.measuring = False
         self.uptime = None
+        self.contact = None
+        self.contact_at = None
 
     def _accept(self, event, now):
         kind = event["type"]
         if self.last_rx is not None and not self.snapshot(now)["connected"]:
             self.last_measurement = self.measurement_at = None
+            self.contact = self.contact_at = None
         if kind == "ready" or (kind == "heartbeat" and self.uptime is not None and
                                ((event["uptime_ms"] - self.uptime) & 0xFFFFFFFF) >= 0x80000000):
             self.last_measurement = self.measurement_at = None
             self.measuring = False
             self.uptime = None
+            self.contact = self.contact_at = None
         if kind in ("ready", "heartbeat"):
-            self.capabilities = {"sensor": event["sensor"], "audio": event["audio"]}
+            self.capabilities = {"sensor": event["sensor"], "audio": event["audio"],
+                                 "commands": event.get("commands", False)}
         if kind == "heartbeat":
             self.uptime = event["uptime_ms"]
             self.measuring = event["measuring"]
@@ -127,6 +157,10 @@ class Receiver:
             self.last_measurement = event
             self.measurement_at = now
             self.measuring = False
+        elif kind == "contact":
+            self.contact = {"sensor": event["sensor"], "pressed": event["pressed"],
+                            "uptime_ms": event["uptime_ms"]}
+            self.contact_at = now
         self.last_rx = now
         self.accepted = min(self.accepted + 1, 0x7FFFFFFF)
 
@@ -166,4 +200,5 @@ class Receiver:
                 "measuring": self.measuring and connected, "capabilities": self.capabilities,
                 "measurement": self.last_measurement if fresh else None,
                 "measurement_age_ms": measurement_age,
+                "contact": self.contact if connected else None,
                 "accepted": self.accepted, "rejected": self.rejected}

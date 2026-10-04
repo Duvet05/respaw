@@ -8,6 +8,7 @@ let micTimer = null;
 let pending = false;
 let switching = true;
 let sessionVersion = 0;
+let voiceUrl = null;
 
 async function api(path, data = {}) {
   const response = await fetch(`/api/${path}`, {
@@ -24,7 +25,7 @@ function notice(text = '') { $('notice').textContent = text; }
 function face(expression) { $('face').className = `robot ${expression}`; }
 function memoryStatus(status) {
   $('memory-status').textContent = status?.ready
-    ? 'Memoria por significado disponible en tu Mac.'
+    ? 'Memoria por significado disponible.'
     : 'Memoria por palabras y contexto disponible.';
   if (status?.pending) $('memory-status').textContent += ` Quedan ${status.pending} recuerdos por preparar.`;
   $('memory-status').title = status?.error || '';
@@ -114,11 +115,34 @@ async function refreshMemories() {
 
 async function stop() {
   epoch += 1;
+  stopPlayback();
   if (recording?.state === 'recording') recording.stop();
   releaseMic();
   busy(false);
   face('neutral');
   if (session) await api('stop');
+}
+
+function stopPlayback() {
+  const player = $('voice-audio');
+  player.pause();
+  player.removeAttribute('src');
+  player.hidden = true;
+  if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+  voiceUrl = null;
+}
+
+async function readReply(current) {
+  const result = await api('speak');
+  if (current !== epoch || !$('voice').checked || !result.audio) return;
+  stopPlayback();
+  const bytes = Uint8Array.from(atob(result.audio), (character) => character.charCodeAt(0));
+  voiceUrl = URL.createObjectURL(new Blob([bytes], { type: result.mime }));
+  const player = $('voice-audio');
+  player.src = voiceUrl;
+  player.hidden = false;
+  try { await player.play(); }
+  catch { if (current === epoch) notice('Pulsa reproducir para escuchar la respuesta.'); }
 }
 
 async function newSession() {
@@ -207,7 +231,7 @@ $('chat-form').onsubmit = async (event) => {
       };
       answer.append(document.createElement('br'), choose);
     }
-    if ($('voice').checked) await api('speak');
+    if ($('voice').checked) await readReply(current);
   } catch (error) {
     if (current === epoch) notice(error.message);
   } finally {
@@ -290,22 +314,23 @@ $('mic').onclick = async () => {
     recording.onstop = async () => {
       releaseMic();
       if (captureEpoch !== epoch) return;
-      notice('Transcribiendo en tu Mac…');
+      notice('Transcribiendo…');
       try {
         const blob = new Blob(chunks, { type: mime });
         const bytes = new Uint8Array(await blob.arrayBuffer());
+        if (captureEpoch !== epoch) return;
         let binary = '';
         for (const byte of bytes) binary += String.fromCharCode(byte);
         const result = await api('transcribe', { audio: btoa(binary), suffix: `.${mime.split('/')[1]}` });
         if (captureEpoch !== epoch) return;
         $('message').value = result.text;
         notice('Revisa lo transcrito y pulsa Enviar.');
-      } catch (error) { notice(error.message); }
+      } catch (error) { if (captureEpoch === epoch) notice(error.message); }
     };
     recording.onerror = () => { releaseMic(); notice('No se pudo grabar el audio.'); };
     recording.start();
     $('mic').textContent = 'Terminar grabación';
-    notice('Te escucho. Máximo 30 segundos; el audio se elimina tras transcribirlo.');
+    notice('Te escucho. Máximo 30 segundos. Revisa el texto antes de enviarlo.');
     micTimer = setTimeout(() => { if (recording?.state === 'recording') recording.stop(); }, 30000);
   } catch (error) { releaseMic(); notice(error.message); }
 };
@@ -315,16 +340,24 @@ async function initialize() {
   await newSession();
   const status = await api('status');
   memoryStatus(status.retrieval);
-  $('model-status').textContent = status.model.ready ? `Modelo local listo · ${status.model.model}` : status.model.error;
-  $('device-status').textContent = status.robot.simulated ? 'Pantalla en modo simulación · Mega sin conectar' : 'Mega conectado por USB';
+  const cloud = status.model.provider === 'openai';
+  $('execution-status').textContent = cloud ? '● Conversación en nube' : '● Modelo local';
+  $('model-status').textContent = status.model.ready
+    ? `${cloud ? 'Modelo en nube' : 'Modelo local'} listo · ${status.model.model}` : status.model.error;
+  robotStatus(status.robot);
+  const cloudVoice = status.speech.provider === 'cloud';
+  if (cloud || cloudVoice) {
+    $('privacy-notice').textContent = 'Solo guardamos los mensajes que marques «Recordar». Los proveedores en nube procesan la conversación o el audio cuando utilizas esas funciones.';
+  }
   $('voice').disabled = !status.speech.tts;
   $('mic').disabled = !status.speech.stt || !navigator.mediaDevices || !window.MediaRecorder;
-  if (!status.speech.stt) $('mic').title = 'Configura whisper.cpp para transcribir sin conexión.';
+  if (!status.speech.stt) $('mic').title = cloudVoice
+    ? 'Configura la clave de OpenAI para transcribir.' : 'Configura whisper.cpp para transcribir sin conexión.';
   await refreshMemories();
   setInterval(async () => {
     try {
       const robot = await api('robot');
-      if (robot.error) $('device-status').textContent = robot.error;
+      robotStatus(robot);
       if (robot.measurement) {
         $('measurement').textContent = robot.measurement.valid
           ? `${robot.measurement.bpm.toFixed(1)} BPM · RMSSD ${robot.measurement.rmssd.toFixed(1)} ms. Lectura orientativa.`
@@ -332,5 +365,14 @@ async function initialize() {
       }
     } catch { /* A closed local server will be reported on the next user action. */ }
   }, 3000);
+}
+
+function robotStatus(robot) {
+  $('device-status').textContent = robot.error || (robot.simulated
+    ? 'Pantalla en modo simulación · Mega sin conectar'
+    : robot.ready ? (robot.transport === 'wifi' ? 'Mega conectado mediante el Pico' : 'Mega conectado por USB')
+      : 'Esperando al robot');
+  $('contact-status').textContent = robot.contact && robot.ready
+    ? robot.contact.pressed ? 'Contacto de presión detectado.' : 'Sensor de presión libre.' : '';
 }
 initialize().catch((error) => notice(error.message));

@@ -13,9 +13,12 @@ TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 def validate(value):
     if not isinstance(value, dict) or type(value.get("v")) is not int or value["v"] != 1:
         raise ValueError("bad_config")
-    if set(value) != {"v", "ssid", "password", "server_url", "token", "ap_password"}:
+    required = {"v", "ssid", "password", "server_url", "token", "ap_password"}
+    if set(value) not in (required, required | {"uart_commands"}):
         raise ValueError("bad_fields")
-    if any(not isinstance(value[key], str) for key in value if key != "v"):
+    if type(value.get("uart_commands", False)) is not bool:
+        raise ValueError("bad_uart_commands_flag")
+    if any(not isinstance(value[key], str) for key in value if key not in ("v", "uart_commands")):
         raise ValueError("bad_text")
     if len(value["ssid"].encode("utf-8")) > 32 or len(value["password"].encode("utf-8")) > 63:
         raise ValueError("bad_wifi")
@@ -32,7 +35,7 @@ def validate(value):
         raise ValueError("bad_port")
     if not 32 <= len(value["token"]) <= 128 or not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" for c in value["token"]):
         raise ValueError("bad_token")
-    if not 12 <= len(value["ap_password"]) <= 63 or not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" for c in value["ap_password"]):
+    if not 8 <= len(value["ap_password"]) <= 63 or not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" for c in value["ap_password"]):
         raise ValueError("bad_ap_password")
     return value
 

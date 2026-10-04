@@ -14,7 +14,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pico/source/respaw-v2"))
 from link_protocol import EXPRESSIONS, MAX_PACKET, action_line, decode_packet
-from telemetry import parse_frame
+from telemetry import UART_ERROR_REASONS, parse_frame
+
+ACTION_ERROR_REASONS = frozenset(UART_ERROR_REASONS + (
+    "mega_unavailable", "unsupported", "ack_timeout", "uart_write_failed", "too_many_pending",
+    "bad_frame",
+))
 
 
 def encode(packet):
@@ -31,6 +36,25 @@ class Session:
     pending: dict = field(default_factory=dict)
     last_action: dict | None = None
     last_event: dict | None = None
+    capabilities: dict | None = None
+    contact: dict | None = None
+    measurement: dict | None = None
+    measurement_at: float | None = None
+    mega_at: float | None = None
+    mega_uptime: int | None = None
+    measuring: bool = False
+    command_ready: bool = False
+    command_ready_at: float | None = None
+    dispatch_sequences: dict = field(default_factory=dict)
+
+
+@dataclass
+class Pending:
+    line: str
+    command: str
+    future: object
+    expiry: object
+    stage: str = "pending"
 
 
 class LinkServer:
@@ -70,12 +94,64 @@ class LinkServer:
         if session is not None:
             now = asyncio.get_running_loop().time()
             result.update(transport=session.transport,
-                          last_seen_age_ms=int(max(0, now - session.last_seen) * 1000),
-                          last_action=session.last_action)
+                          last_seen_age_ms=min(999999999, int(max(0, now - session.last_seen) * 1000)),
+                          last_action=session.last_action,
+                          mega_connected=self._mega_connected(session, now),
+                          command_ready=(session.command_ready and session.command_ready_at is not None
+                                         and 0 <= now - session.command_ready_at < min(10, self.heartbeat_timeout)
+                                         and self._mega_connected(session, now)),
+                          capabilities=session.capabilities if self._mega_connected(session, now) else None,
+                          contact=session.contact if self._mega_connected(session, now) else None)
             if session.last_event is not None:
                 result["last_event"] = {key: session.last_event[key] for key in ("source", "event_type")}
-                result["last_event"]["age_ms"] = int(max(0, now - session.last_event["at"]) * 1000)
         return result
+
+    @staticmethod
+    def _mega_connected(session, now):
+        timeout = 36 if session.measuring else 6
+        return session.mega_at is not None and 0 <= now - session.mega_at < timeout
+
+    def telemetry(self, kind):
+        session = self.session
+        now = asyncio.get_running_loop().time()
+        event = None
+        if session is not None and self._mega_connected(session, now):
+            if kind == "contact":
+                event = session.contact
+            elif session.measurement_at is not None and 0 <= now - session.measurement_at < 60:
+                event = session.measurement
+        return {"v": 1, "type": "telemetry", "kind": kind, "event": event}
+
+    def _receive_uart(self, session, event, now):
+        self._clear_expired_mega(session, now)
+        kind = event["type"]
+        if kind in ("ready", "heartbeat"):
+            reboot = (kind == "ready" or (session.mega_uptime is not None and
+                      ((event["uptime_ms"] - session.mega_uptime) & 0xFFFFFFFF) >= 0x80000000))
+            if reboot:
+                session.contact = session.measurement = session.measurement_at = None
+                session.mega_uptime = None
+            session.capabilities = {key: event.get(key, False) for key in ("sensor", "audio", "commands")}
+            session.measuring = event.get("measuring", False)
+            if session.measuring:
+                session.measurement = session.measurement_at = None
+            if kind == "heartbeat":
+                session.mega_uptime = event["uptime_ms"]
+        elif kind == "contact":
+            session.contact = event
+        elif kind == "measurement":
+            session.measurement, session.measurement_at = event, now
+            session.measuring = False
+        elif kind not in ("ack", "error"):
+            return
+        session.mega_at = now
+
+    def _clear_expired_mega(self, session, now):
+        if session.mega_at is not None and not self._mega_connected(session, now):
+            # A frame after an outage cannot recover missed contact edges or
+            # establish that earlier readings and capabilities still apply.
+            session.contact = session.measurement = session.measurement_at = session.capabilities = None
+            session.measuring = False
 
     async def send_action(self, command, argument=None):
         packet = {"v": 1, "type": "action", "id": self.next_id, "command": command}
@@ -85,12 +161,12 @@ class LinkServer:
         session = self.session
         if session is None:
             return {"v": 1, "type": "command_result", "stage": "error", "reason": "robot_offline"}
-        if len(session.pending) >= 16:
+        if len(session.pending) >= (16 if command == "STOP" else 15):
             return {"v": 1, "type": "command_result", "stage": "error", "reason": "too_many_pending"}
         self.next_id = self.next_id % 65535 + 1
         future = asyncio.get_running_loop().create_future()
         expiry = asyncio.get_running_loop().call_later(self.action_timeout, self._expire, session, packet["id"])
-        session.pending[packet["id"]] = (line, future, expiry)
+        session.pending[packet["id"]] = Pending(line, command, future, expiry)
         session.last_action = {"id": packet["id"], "command": command, "stage": "pending"}
         try:
             await session.websocket.send(encode(packet))
@@ -104,8 +180,7 @@ class LinkServer:
         pending = session.pending.pop(ident, None)
         if pending is None:
             return
-        _, future, expiry = pending
-        expiry.cancel()
+        pending.expiry.cancel()
         result = {"v": 1, "type": "command_result", "id": ident, "stage": stage}
         if reason is not None:
             result["reason"] = reason
@@ -113,8 +188,8 @@ class LinkServer:
             session.last_action.update(stage=stage)
             if reason is not None:
                 session.last_action["reason"] = reason
-        if not future.done():
-            future.set_result(result)
+        if not pending.future.done():
+            pending.future.set_result(result)
 
     def _expire(self, session, ident):
         if ident in session.pending:
@@ -147,27 +222,45 @@ class LinkServer:
                 kind = packet.get("type")
                 session.last_seen = asyncio.get_running_loop().time()
                 if kind == "heartbeat":
-                    if set(packet) != {"v", "type", "id"} or type(packet["id"]) is not int or not 1 <= packet["id"] <= 65535:
+                    if (set(packet) not in ({"v", "type", "id"}, {"v", "type", "id", "command_ready"})
+                            or type(packet["id"]) is not int or not 1 <= packet["id"] <= 65535
+                            or ("command_ready" in packet and type(packet["command_ready"]) is not bool)):
                         raise ValueError("bad_heartbeat")
                     session.last_heartbeat = session.last_seen
+                    session.command_ready = packet.get("command_ready", False) and session.transport == "wifi"
+                    session.command_ready_at = session.last_seen
                     await websocket.send(encode({"v": 1, "type": "heartbeat_ack", "id": packet["id"]}))
                 elif kind in ("ack", "action_error"):
                     ident = packet.get("id")
                     if type(ident) is not int or ident not in session.pending:
                         raise ValueError("bad_ack_id")
                     if kind == "ack":
+                        pending = session.pending[ident]
+                        stage = packet.get("stage")
+                        valid_transition = ((stage == "validated" and session.transport == "usb_diagnostic" and pending.stage == "pending")
+                                            or (stage == "forwarded" and session.transport == "wifi" and pending.stage == "pending")
+                                            or (stage == "mega_accepted" and session.transport == "wifi" and pending.stage == "forwarded"))
                         if (set(packet) != {"v", "type", "id", "stage", "uart_line"}
-                                or packet["stage"] not in ("validated", "forwarded")
-                                or (packet["stage"] == "forwarded" and session.transport != "wifi")
-                                or packet["uart_line"] != session.pending[ident][0]):
+                                or not valid_transition or packet["uart_line"] != pending.line):
                             raise ValueError("bad_ack")
                         stage, reason = packet["stage"], None
                     else:
                         if (set(packet) != {"v", "type", "id", "reason"}
-                                or packet["reason"] not in ("mega_unavailable", "unsupported")):
+                                or packet["reason"] not in ACTION_ERROR_REASONS):
                             raise ValueError("bad_action_error")
                         stage, reason = "error", packet["reason"]
-                    self._finish(session, ident, stage, reason)
+                    if stage == "forwarded":
+                        session.pending[ident].stage = stage
+                        if session.last_action["id"] == ident:
+                            session.last_action["stage"] = stage
+                    else:
+                        if stage == "mega_accepted":
+                            self._clear_expired_mega(session, session.last_seen)
+                            pending = session.pending[ident]
+                            if pending.command in ("MEASURE", "STOP"):
+                                session.measuring = pending.command == "MEASURE"
+                                session.measurement = session.measurement_at = None
+                        self._finish(session, ident, stage, reason)
                     event = {"type": "action_" + stage, "robot_id": self.robot_id, "id": ident, "stage": stage}
                     if reason is not None:
                         event["reason"] = reason
@@ -183,6 +276,8 @@ class LinkServer:
                             or (packet["source"] == "synthetic" and session.transport != "usb_diagnostic")):
                         raise ValueError("bad_event")
                     event = parse_frame(encode(packet["event"]))
+                    if packet["source"] == "uart":
+                        self._receive_uart(session, event, session.last_seen)
                     session.last_event = {"source": packet["source"], "event_type": event["type"], "at": session.last_seen}
                     self.emit({"type": "event_received", "robot_id": self.robot_id,
                                "source": packet["source"], "event_type": event["type"]})
@@ -211,19 +306,47 @@ class LinkServer:
                 packet = decode_packet(raw)
                 if set(packet) == {"v", "type"} and packet["type"] == "status":
                     result = self.status()
-                elif packet.get("type") == "command" and set(packet) in (
-                        {"v", "type", "command"}, {"v", "type", "command", "argument"}):
-                    action_line({**packet, "type": "action", "id": self.next_id})
-                    result = await self.send_action(packet["command"], packet.get("argument"))
+                elif (set(packet) == {"v", "type", "kind"} and packet["type"] == "telemetry"
+                      and packet["kind"] in ("contact", "measurement")):
+                    result = self.telemetry(packet["kind"])
+                elif packet.get("type") == "command":
+                    result = await self.operator_command(packet)
                     if isinstance(result, asyncio.Future):
                         result = await asyncio.shield(result)
                 else:
                     raise ValueError("bad_operator_packet")
-                await websocket.send(encode(result))
+                encoded = encode(result)
+                if len(encoded.encode("utf-8")) > MAX_PACKET:
+                    raise ValueError("oversized_response")
+                await websocket.send(encoded)
         except (ValueError, TypeError, KeyError):
             await websocket.close(1008, "invalid_packet")
         except ConnectionClosed:
             pass
+
+    async def operator_command(self, packet):
+        fields = set(packet)
+        ordered = "client_id" in packet or "sequence" in packet
+        base = fields - {"client_id", "sequence"}
+        if base not in ({"v", "type", "command"}, {"v", "type", "command", "argument"}):
+            raise ValueError("bad_operator_command")
+        action_line({**{key: packet[key] for key in base}, "type": "action", "id": self.next_id})
+        if ordered:
+            client_id, sequence = packet.get("client_id"), packet.get("sequence")
+            if (not isinstance(client_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,64}", client_id)
+                    or type(sequence) is not int or not 1 <= sequence <= 0xFFFFFFFF):
+                raise ValueError("bad_operator_sequence")
+            session = self.session
+            if session is not None:
+                highest = session.dispatch_sequences.get(client_id, 0)
+                if sequence <= highest and packet["command"] != "STOP":
+                    return {"v": 1, "type": "command_result", "stage": "error", "reason": "superseded"}
+                if client_id not in session.dispatch_sequences and len(session.dispatch_sequences) >= 64:
+                    if packet["command"] != "STOP":
+                        return {"v": 1, "type": "command_result", "stage": "error", "reason": "too_many_clients"}
+                else:
+                    session.dispatch_sequences[client_id] = max(highest, sequence)
+        return await self.send_action(packet["command"], packet.get("argument"))
 
     async def start(self, host="127.0.0.1", port=8766):
         from websockets.asyncio.server import serve

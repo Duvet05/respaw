@@ -37,7 +37,9 @@ jobs:
         env:
           PYTHONPATH: companion
           RESPAW_SCREENSHOT_DIR: ${{ runner.temp }}/respaw-screenshots
-        run: python tests/browser_smoke.py --browser chromium
+        run: |
+          python tests/browser_smoke.py --browser chromium
+          python tests/browser_voice_smoke.py --browser chromium
       - name: Adjuntar capturas para revisión
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

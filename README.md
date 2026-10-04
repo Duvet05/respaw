@@ -8,11 +8,12 @@ nube. El código actual y las conexiones pendientes se distinguen en estas guía
 - [Arquitectura, responsabilidades y protocolo](docs/ARCHITECTURE.md)
 - [Roadmap y pruebas de integración](docs/ROADMAP.md)
 - [Servidor de enlace desplegado en Raspberry](docs/server-link.md)
+- [Conversación GPT, memoria y voz en Raspberry](docs/companion-raspberry.md)
 - [Gateway Wi-Fi y setup desde el celular](pico/source/respaw-gateway/README.md)
 - [Verificación del servidor y del Pico, 3 de octubre](docs/verificacion-enlace-2026-10-03.md)
 
 La primera versión del acompañante conversa en español, recupera recuerdos
-autorizados entre sesiones y permite corregirlos u olvidarlos. La conversación
+autorizados entre sesiones y permite corregirlos u olvidarlos. El modo local
 se ejecuta en el Mac con Ollama; el Mega 2560 conserva el control de la pantalla
 TFT de 3,5 pulgadas y del hardware del robot.
 
@@ -48,9 +49,10 @@ make check       # Python, integración HTTP local, núcleo C++ y sintaxis JavaS
 make firmware    # Compila para Mega con dependencias fijadas; no carga la placa
 ```
 
-La guía explica la preparación inicial de modelos, la voz opcional y el enlace
-USB. La primera preparación necesita Internet; la aplicación no tiene un
-proveedor remoto de conversación ni descarga modelos automáticamente.
+La guía offline explica la preparación inicial de modelos, la voz opcional y el
+enlace USB. Ese modo no descarga modelos automáticamente ni cambia de proveedor
+si falla Ollama. La Raspberry usa ahora el proveedor GPT explícito y espera sus
+claves de API para conversar.
 
 ## Archivo de recuperación de Pico W y Mega 2560
 

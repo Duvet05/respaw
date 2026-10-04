@@ -7,3 +7,6 @@ __pycache__/
 *.sqlite3-*
 build/
 .env
+*.env
+link.token
+respaw-gateway-config.json

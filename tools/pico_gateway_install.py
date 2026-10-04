@@ -58,7 +58,8 @@ def settings(args):
     else:
         if not args.server_url or not args.token_file:
             raise ValueError("Provide --server-url and --token-file, or --config-file.")
-        password = args.ap_password_file.read_text().strip() if args.ap_password_file else secrets.token_urlsafe(12)
+        password = (args.ap_password_file.read_text().strip() if args.ap_password_file
+                    else args.ap_password if args.ap_password is not None else secrets.token_urlsafe(12))
         value = {"v": 1, "ssid": "", "password": "", "server_url": args.server_url,
                  "token": args.token_file.read_text().strip(), "ap_password": password}
     return validate(value)
@@ -72,8 +73,13 @@ def main():
     parser.add_argument("--ca-file", required=True, type=Path, help="Trusted root certificate in DER format")
     parser.add_argument("--server-url", help="Public wss:// hostname, optional port, /robot route")
     parser.add_argument("--token-file", type=Path, help="Private Bearer token file; never put the token on the command line")
-    parser.add_argument("--ap-password-file", type=Path, help="Optional private WPA2 pairing key file")
+    ap_group = parser.add_mutually_exclusive_group()
+    ap_group.add_argument("--ap-password-file", type=Path, help="Optional private WPA2 pairing key file")
+    ap_group.add_argument("--ap-password", help="Optional explicit AP pairing key (8–63 ASCII characters)")
     parser.add_argument("--config-file", type=Path, help="Optional private JSON containing all validated fields")
+    uart_group = parser.add_mutually_exclusive_group()
+    uart_group.add_argument("--enable-uart-commands", action="store_true", help="Enable TX only after confirming safe bidirectional wiring")
+    uart_group.add_argument("--disable-uart-commands", action="store_true", help="Keep GP0 as an input")
     args = parser.parse_args()
     value = settings(args)
     ca = args.ca_file.read_bytes()
@@ -84,7 +90,6 @@ def main():
         raise ValueError("Device backups and pairing secrets must remain outside the repository.")
     backup.mkdir(parents=True, mode=0o700, exist_ok=False)
     os.chmod(backup, 0o700)
-    private_write(backup / "pairing.json", (json.dumps(value, indent=2) + "\n").encode())
     report = {"port": args.port, "started_at": datetime.now(timezone.utc).isoformat(),
               "before": [], "installed": [], "complete": False, "tls_preflight": False,
               "mega_commands": False, "secrets_file": str(backup / "pairing.json")}
@@ -113,11 +118,31 @@ def main():
             for required in ("receiver.py", "telemetry.py", "main.py"):
                 if required not in before:
                     raise ValueError("Existing receiver installation required: missing " + required)
+            if CONFIG_PATH in before and not args.config_file:
+                previous = validate(json.loads(before[CONFIG_PATH]))
+                for key in ("ssid", "password", "ap_password", "uart_commands"):
+                    if key in previous:
+                        value[key] = previous[key]
+            if args.enable_uart_commands:
+                value["uart_commands"] = True
+            elif args.disable_uart_commands:
+                value["uart_commands"] = False
+            if args.ap_password is not None:
+                value["ap_password"] = args.ap_password
+            elif args.ap_password_file:
+                value["ap_password"] = args.ap_password_file.read_text().strip()
+            validate(value)
+            private_write(backup / "pairing.json", (json.dumps(value, indent=2) + "\n").encode())
+            report["uart_commands_enabled"] = value.get("uart_commands", False)
             gateway_main = (SOURCE / "main.py").read_bytes()
             files = {path.relative_to(SOURCE).as_posix(): path.read_bytes()
                      for path in sorted((SOURCE / "respaw_gateway").rglob("*"))
                      if path.is_file() and path.suffix != ".pyc" and "__pycache__" not in path.parts}
             files["respaw_gateway/ca.der"] = ca
+            telemetry_source = (ROOT / "pico/source/respaw-v2/telemetry.py").read_bytes()
+            if before["telemetry.py"] != telemetry_source:
+                files["telemetry.py"] = telemetry_source
+            report["telemetry_updated"] = "telemetry.py" in files
             protocol = (ROOT / "pico/source/respaw-v2/link_protocol.py").read_bytes()
             if "link_protocol.py" in before and before["link_protocol.py"] != protocol:
                 raise ValueError("Installed link_protocol.py differs; inspect it before upgrading.")
@@ -134,8 +159,9 @@ def main():
             # Fail closed if this actual firmware cannot validate this CA.
             execute(repl, "import gc, json, time, machine, sys\n"
                           "for _name in list(sys.modules):\n"
-                          " if _name == 'respaw_gateway' or _name.startswith('respaw_gateway.'): del sys.modules[_name]\n"
+                          " if _name in ('respaw_gateway', 'receiver', 'telemetry', 'link_protocol') or _name.startswith('respaw_gateway.'): del sys.modules[_name]\n"
                           "gc.collect()\nfrom respaw_gateway import gateway, config\n"
+                          "assert hasattr(machine.Pin, 'ALT_UART')\n"
                           "_config=config.validate(json.load(open(%r)))\n_ctx=gateway.tls_context()\n"
                           "assert _ctx.verify_mode == __import__('ssl').CERT_REQUIRED\n"
                           "assert gateway.urlparse(_config['server_url']).protocol == 'wss'\n"
@@ -150,7 +176,7 @@ def main():
             # loading and all files. Existing max30102/receiver stay byte exact.
             execute(repl, "import os\nos.rename(%r, %r)\nos.sync()" % (config_temporary, CONFIG_PATH))
             for name, data in before.items():
-                if (name in ("main.py", CONFIG_PATH, config_temporary) or name.startswith("respaw_gateway/")
+                if (name in files or name in ("main.py", CONFIG_PATH, config_temporary) or name.startswith("respaw_gateway/")
                         or any(part.startswith(".respaw-upload-") for part in name.split("/"))):
                     continue
                 if read_remote_file(repl, name) != data:

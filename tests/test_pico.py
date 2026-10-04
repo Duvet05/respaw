@@ -29,6 +29,29 @@ def frame(event):
 
 
 class PicoTests(unittest.TestCase):
+    def test_commands_contact_and_actual_ack_error_frames_are_bounded_and_preserved(self):
+        receiver = telemetry.Receiver()
+        ready = {"v": 1, "type": "ready", "board": "mega2560", "sensor": True,
+                 "audio": False, "commands": True}
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": True, "uptime_ms": 12}
+        ack = {"v": 1, "type": "ack", "id": 32768, "command": "PING"}
+        error = {"v": 1, "type": "error", "id": 1, "reason": "controller_busy"}
+        self.assertEqual(receiver.feed(frame(ready) + frame(contact) + frame(ack) + frame(error), 10),
+                         [ready, contact, ack, error])
+        status = receiver.snapshot(11)
+        self.assertTrue(status["capabilities"]["commands"])
+        self.assertEqual(status["contact"], {"sensor": "fsr_a8", "pressed": True, "uptime_ms": 12})
+        for event in ({**ready, "commands": 1}, {**contact, "pressed": 1}, {**contact, "sensor": "head"},
+                      {**ack, "id": True}, {**ack, "command": "BAD"}, {**error, "reason": "invented"}):
+            with self.subTest(event=event), self.assertRaises(ValueError):
+                telemetry.parse_frame(json.dumps(event))
+        self.assertIsNone(receiver.snapshot(6010)["contact"])
+        receiver.feed(frame(ack), 6011)
+        self.assertIsNone(receiver.snapshot(6011)["contact"])
+        receiver.feed(frame(contact), 6012)
+        receiver.feed(frame(ready), 6013)
+        self.assertIsNone(receiver.snapshot(6013)["contact"])
+
     def test_production_mega_frames_are_accepted_by_pico(self):
         with tempfile.TemporaryDirectory(prefix="respaw-telemetry-") as temp:
             binary = Path(temp) / "frames"

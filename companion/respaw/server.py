@@ -81,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get_content_type() != "application/json":
                 raise ValueError("Se requiere JSON.")
             size = int(self.headers.get("Content-Length", "0"))
-            limit = 11_000_000 if self.path == "/api/transcribe" else 16_000
+            limit = 14_000_000 if self.path == "/api/transcribe" else 16_000
             if not 1 <= size <= limit:
                 raise ValueError("Petición vacía o demasiado grande.")
             body = json.loads(self.rfile.read(size))
@@ -141,8 +141,16 @@ class Handler(BaseHTTPRequestHandler):
                 last = session.history[-1] if session.history else None
                 if not last or last["role"] != "assistant":
                     raise ValueError("No hay una respuesta para leer.")
-                app.speech.speak(last["content"])
-            return {"speaking": True}
+                text, message_id, generation = last["content"], last["id"], session.generation
+                if not callable(getattr(app.speech, "synthesize", None)):
+                    app.speech.speak(text)
+                    return {"speaking": True}
+            audio, mime = app.speech.synthesize(text)
+            with app.lock:
+                if (session.generation != generation or not session.history
+                        or session.history[-1]["id"] != message_id):
+                    raise Cancelled("Audio descartado: la conversación cambió o se detuvo.")
+            return {"speaking": True, "audio": base64.b64encode(audio).decode("ascii"), "mime": mime}
         if path == "/api/transcribe":
             audio = base64.b64decode(body["audio"], validate=True)
             return {"text": app.speech.transcribe(audio, body["suffix"])}

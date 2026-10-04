@@ -1,0 +1,19 @@
+[Unit]
+Description=ResPaw conversation and persistent memory
+After=respaw-link.service network-online.target
+Wants=respaw-link.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/respaw/current
+Environment=PYTHONPATH=companion
+EnvironmentFile=%h/.local/state/respaw/companion.env
+EnvironmentFile=-%h/.local/state/respaw/cloud.env
+ExecStart=%h/.local/share/respaw/venv-link/bin/python -m respaw --provider ${RESPAW_PROVIDER} --model ${RESPAW_MODEL} --model-timeout ${RESPAW_MODEL_TIMEOUT} --speech-provider ${RESPAW_SPEECH_PROVIDER} --no-semantic-memory --data-dir %h/.local/share/respaw/companion-data --robot-link ws://127.0.0.1:8767/operator --robot-token-file %h/.local/state/respaw/link.token
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -50,6 +50,28 @@ class SendRaceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(server.session.pending, {})
         self.assertEqual(server.session.last_action["stage"], "disconnected")
 
+    async def test_operator_client_limits_and_sequence_types_are_bounded(self):
+        server = LinkServer("t" * 32, "test_pico", emit=lambda event: None)
+
+        class AcceptImmediately:
+            async def send(self, raw):
+                server._finish(server.session, json.loads(raw)["id"], "mega_accepted")
+
+        now = asyncio.get_running_loop().time()
+        server.session = Session(AcceptImmediately(), "test_pico", "wifi", now, now)
+        for index in range(64):
+            packet = {"v": 1, "type": "command", "command": "PING",
+                      "client_id": "client_%09d" % index, "sequence": 1}
+            await server.operator_command(packet)
+        self.assertEqual(len(server.session.dispatch_sequences), 64)
+        packet = {"v": 1, "type": "command", "command": "PING", "client_id": "different_client", "sequence": 1}
+        self.assertEqual((await server.operator_command(packet))["reason"], "too_many_clients")
+        self.assertIsInstance(await server.operator_command({**packet, "command": "STOP"}), asyncio.Future)
+        self.assertEqual(len(server.session.dispatch_sequences), 64)
+        for bad in (True, 0, 0x100000000, "1"):
+            with self.subTest(sequence=bad), self.assertRaises(ValueError):
+                await server.operator_command({**packet, "sequence": bad})
+
 
 @unittest.skipUnless(HAS_WEBSOCKETS, "Install requirements-link.txt for WebSocket integration tests")
 class LinkTests(unittest.IsolatedAsyncioTestCase):
@@ -161,7 +183,7 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
         from websockets.exceptions import ConnectionClosed
         for mode in ("duplicate", "stage", "heartbeat", "synthetic_wifi", "unknown_id"):
             async with self.connect() as ws:
-                action = await self.hello(ws, transport="wifi")
+                action = await self.hello(ws, transport="usb_diagnostic" if mode == "duplicate" else "wifi")
                 ack = {"v": 1, "type": "ack", "id": action["id"], "stage": "validated",
                        "uart_line": action_line(action).decode()}
                 if mode == "duplicate":
@@ -217,7 +239,7 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
         self.probe.action_timeout = 0.05
         async with self.connect() as ws:
             first = await self.hello(ws)
-            future = self.probe.session.pending[first["id"]][1]
+            future = self.probe.session.pending[first["id"]].future
             result = await asyncio.wait_for(asyncio.shield(future), 1)
             self.assertEqual(result["stage"], "unconfirmed")
             self.assertEqual(result["reason"], "ack_timeout")
@@ -233,3 +255,131 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(asyncio.TimeoutError):
                 await asyncio.wait_for(ws.recv(), 0.04)
             self.assertIsNone(self.probe.status()["last_action"])
+
+    async def test_forwarded_is_pending_until_real_mega_ack(self):
+        async with self.connect() as ws:
+            action = await self.hello(ws, transport="wifi")
+            future = self.probe.session.pending[action["id"]].future
+            acknowledgement = {"v": 1, "type": "ack", "id": action["id"],
+                               "stage": "forwarded", "uart_line": action_line(action).decode()}
+            await ws.send(encode(acknowledgement))
+            self.assertEqual(json.loads(await ws.recv())["stage"], "forwarded")
+            self.assertFalse(future.done())
+            self.assertEqual(self.probe.status()["last_action"]["stage"], "forwarded")
+            await ws.send(encode({**acknowledgement, "stage": "mega_accepted"}))
+            self.assertEqual(json.loads(await ws.recv())["stage"], "mega_accepted")
+            self.assertEqual((await future)["stage"], "mega_accepted")
+            self.assertNotIn(action["id"], self.probe.session.pending)
+
+    async def test_contact_measurement_stay_in_ram_and_expire_on_reboot(self):
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": True, "uptime_ms": 4294967295}
+        measurement = {"v": 1, "type": "measurement", "valid": True, "rr_count": 12,
+                       "rmssd_pairs": 11, "rejected": 0, "window_ms": 30000,
+                       "motion_checked": False, "bpm": 70, "sdnn": 35, "rmssd": 40}
+        async with self.connect() as ws:
+            action = await self.hello(ws, transport="wifi")
+            await ws.send(encode({"v": 1, "type": "action_error", "id": action["id"], "reason": "controller_busy"}))
+            await ws.recv()
+            for event in ({"v": 1, "type": "ready", "board": "mega2560", "sensor": True,
+                           "audio": True, "commands": True}, contact, measurement):
+                await ws.send(encode({"v": 1, "type": "event", "source": "uart", "event": event}))
+                await ws.recv()
+            self.assertEqual(self.probe.status()["contact"], contact)
+            self.assertTrue(self.probe.status()["capabilities"]["commands"])
+            self.assertLessEqual(len(encode(self.probe.status()).encode()), 512)
+            async with self.connect(path=self.operator_url) as operator:
+                await operator.send(encode({"v": 1, "type": "telemetry", "kind": "measurement"}))
+                returned = json.loads(await operator.recv())
+                self.assertEqual(returned["event"]["rmssd"], 40)
+                self.assertLessEqual(len(encode(returned)), 512)
+            await ws.send(encode({"v": 1, "type": "event", "source": "uart", "event": {
+                "v": 1, "type": "ready", "board": "mega2560", "sensor": False, "audio": False}}))
+            await ws.recv()
+            self.assertIsNone(self.probe.status()["contact"])
+            self.assertIsNone(self.probe.telemetry("measurement")["event"])
+            self.assertFalse(self.probe.status()["capabilities"]["commands"])
+
+    async def test_expired_mega_contact_and_measurement_not_returned(self):
+        async with self.connect() as ws:
+            await self.hello(ws, transport="wifi")
+            now = asyncio.get_running_loop().time()
+            session = self.probe.session
+            session.capabilities = {"commands": True, "sensor": True, "audio": False}
+            session.contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": True, "uptime_ms": 20}
+            session.measurement = {"v": 1, "type": "measurement", "valid": False, "reason": "cancelled"}
+            session.measurement_at, session.mega_at = now - 7, now - 7
+            self.assertFalse(self.probe.status()["mega_connected"])
+            self.assertIsNone(self.probe.status()["capabilities"])
+            self.assertIsNone(self.probe.status()["contact"])
+            self.assertIsNone(self.probe.telemetry("measurement")["event"])
+            await ws.send(encode({"v": 1, "type": "event", "source": "uart", "event": {
+                "v": 1, "type": "ack", "id": 32768, "command": "PING"}}))
+            await ws.recv()
+            self.assertTrue(self.probe.status()["mega_connected"])
+            self.assertIsNone(self.probe.status()["capabilities"])
+            self.assertIsNone(self.probe.status()["contact"])
+            self.assertIsNone(self.probe.telemetry("measurement")["event"])
+            await ws.send(encode({"v": 1, "type": "event", "source": "uart", "event": {
+                "v": 1, "type": "heartbeat", "board": "mega2560", "commands": True,
+                "sensor": True, "audio": False, "uptime_ms": 100, "measuring": False}}))
+            await ws.recv()
+            self.assertTrue(self.probe.status()["capabilities"]["commands"])
+            self.assertIsNone(self.probe.status()["contact"])
+            self.assertIsNone(self.probe.telemetry("measurement")["event"])
+
+    async def test_command_ready_requires_fresh_native_flag_and_mega_frames(self):
+        async with self.connect() as ws:
+            await self.hello(ws, transport="wifi")
+            await ws.send(encode({"v": 1, "type": "event", "source": "uart", "event": {
+                "v": 1, "type": "ready", "board": "mega2560", "sensor": False, "audio": False, "commands": True}}))
+            await ws.recv()
+            self.assertFalse(self.probe.status()["command_ready"])
+            for value in (True, False):
+                await ws.send(encode({"v": 1, "type": "heartbeat", "id": 1, "command_ready": value}))
+                self.assertEqual(json.loads(await ws.recv()), {"v": 1, "type": "heartbeat_ack", "id": 1})
+                self.assertEqual(self.probe.status()["command_ready"], value)
+            await ws.send(encode({"v": 1, "type": "heartbeat", "id": 2}))
+            await ws.recv()
+            self.assertFalse(self.probe.status()["command_ready"])
+            self.probe.session.command_ready = True
+            self.probe.session.command_ready_at = asyncio.get_running_loop().time() - 11
+            self.assertFalse(self.probe.status()["command_ready"])
+
+    async def test_full_normal_queue_retains_a_stop_slot(self):
+        async with self.connect() as ws:
+            await self.hello(ws, transport="wifi")
+            for _ in range(14):
+                await self.probe.send_action("FACE", "warm")
+                await ws.recv()
+            self.assertEqual(len(self.probe.session.pending), 15)
+            self.assertEqual((await self.probe.send_action("FACE", "warm"))["reason"], "too_many_pending")
+            stop = await self.probe.send_action("STOP")
+            self.assertFalse(stop.done())
+            self.assertEqual(json.loads(await ws.recv())["command"], "STOP")
+            self.assertEqual(len(self.probe.session.pending), 16)
+
+    async def test_reordered_face_after_stop_is_discarded_but_old_stop_is_allowed(self):
+        async with self.connect() as robot:
+            initial = await self.hello(robot, transport="wifi")
+            await robot.send(encode({"v": 1, "type": "action_error", "id": initial["id"], "reason": "mega_unavailable"}))
+            await robot.recv()
+            client_id = "client_a" * 4
+            request = {"v": 1, "type": "command", "client_id": client_id}
+            async with self.connect(path=self.operator_url) as operator:
+                await operator.send(encode({**request, "command": "STOP", "sequence": 2}))
+                action = json.loads(await robot.recv())
+                self.assertEqual(action["command"], "STOP")
+                await robot.send(encode({"v": 1, "type": "action_error", "id": action["id"], "reason": "mega_unavailable"}))
+                await robot.recv()
+                await operator.recv()
+                await operator.send(encode({**request, "command": "FACE", "argument": "warm", "sequence": 1}))
+                self.assertEqual(json.loads(await operator.recv())["reason"], "superseded")
+                with self.assertRaises(asyncio.TimeoutError):
+                    await asyncio.wait_for(robot.recv(), 0.03)
+                await operator.send(encode({**request, "command": "STOP", "sequence": 1}))
+                action = json.loads(await robot.recv())
+                self.assertEqual(action["command"], "STOP")
+                self.assertEqual(self.probe.session.dispatch_sequences[client_id], 2)
+                await robot.send(encode({"v": 1, "type": "action_error", "id": action["id"], "reason": "mega_unavailable"}))
+                await robot.recv()
+                await operator.recv()

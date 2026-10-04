@@ -4,11 +4,13 @@ Este gateway optativo conecta el Pico W directamente al servidor de la
 Raspberry por `wss://`, incluso si están en redes distintas. El Mac se usa
 para instalar y recuperar archivos; no interviene en el enlace normal.
 
-Conserva `max30102`, `receiver.py` y `telemetry.py`. Lee UART0 en GP1 a
-115200 baudios usando el receptor existente; GP0 sigue como entrada y no
-transmite. El Mega actual procesa órdenes por USB y todavía no admite
-órdenes por este enlace UART. Cada orden recibida se valida y obtiene
-`action_error` con `mega_unavailable`. No se anuncia una actuación física.
+Conserva `max30102` y `receiver.py`, y actualiza el parser compartido
+`telemetry.py` para admitir contacto, capacidades y confirmaciones reales.
+Lee UART0 en GP1 a 115200 baudios. GP0 permanece como entrada de forma
+predeterminada. El firmware Mega v2 actualizado admite órdenes por Serial1;
+el gateway solo habilita TX con una configuración explícita de cableado y
+cuando recibe `commands:true` del Mega. Un firmware anterior o un cableado
+sin confirmar obtiene `action_error` y no recibe una orden UART.
 
 ## Instalación
 
@@ -32,7 +34,9 @@ comando. El ejemplo no descarga certificados ni genera confianza a partir
 del certificado del servidor. El instalador genera una clave WPA2 del AP
 y la guarda en `<backup-dir>/pairing.json`, con permisos `0600`; no imprime
 el token, esa clave ni contraseñas de WiFi. También admite
-`--ap-password-file` y `--config-file` para configuraciones privadas previas.
+`--ap-password-file`, `--ap-password` (8–63 caracteres ASCII) y `--config-file`
+para configuraciones privadas previas. En una actualización conserva la
+red WiFi y la clave del AP existentes, salvo una sustitución explícita.
 
 La CA DER se instala en `respaw_gateway/ca.der`. El instalador verifica los
 archivos escritos, importa el gateway y carga esa CA con `CERT_REQUIRED`
@@ -62,6 +66,10 @@ intentos de enlace, reaparece para corregir la configuración.
   con el certificado. No existe una opción para desactivar la verificación.
   En arranque frío se consulta NTP; si no hay hora válida, no se conecta.
 - Se envían `hello` con `transport=wifi` y latidos cada cinco segundos.
+  Cada latido incluye `command_ready`, que solo es verdadero si TX está
+  autorizado y activo, el Mega está disponible y confirmó el control por
+  `PING`. `commands:true` del Mega por sí solo no habilita el estado listo
+  del acompañante. Las confirmaciones del latido mantienen su formato anterior.
   La falta de confirmación de latidos o la caída del enlace provoca reintentos
   con esperas de 2 a 60 segundos. DNS de MicroPython es síncrono y su duración
   depende del driver; el timeout de `asyncio` no interrumpe esa consulta.
@@ -75,6 +83,40 @@ intentos de enlace, reaparece para corregir la configuración.
   máxima de diez segundos; se descarta al perder el enlace. No se repiten
   acciones ni se reutilizan confirmaciones entre sesiones.
 - Una configuración ausente o inválida vuelve al receptor UART original.
+
+## UART bidireccional optativo
+
+Antes de usar `--enable-uart-commands`, confirmar la instalación del nuevo
+firmware Mega v2 y el cableado seguro: GP0 del Pico hacia RX1 (pin 19) del
+Mega, TX1 (pin 18) del Mega hacia GP1 del Pico **mediante adaptación de nivel
+a 3.3 V**, y GND común. No conectar una salida de 5 V directamente al Pico.
+La opción guarda `uart_commands:true`; no habilita TX antes de detectar
+la capacidad real del Mega. `--disable-uart-commands` vuelve al modo de
+recepción. Este indicador no aparece en el formulario móvil.
+
+El puente solicita el control con un `PING` local cada dos segundos. El
+Mega conserva ese propietario durante seis segundos y puede responder
+`controller_busy` si otra conexión lo controla. Las órdenes `FACE` y
+`MEASURE` requieren control confirmado; `STOP` y `PING` pueden enviarse
+sin una confirmación anterior. Los ACK correlacionados del `PING` mantienen
+la frescura del enlace durante una captura, cuando se omite el heartbeat
+periódico para preservar el muestreo.
+
+Los IDs del servidor se traducen a IDs UART independientes. Hay como máximo
+ocho órdenes pendientes (una plaza reservada para `STOP`) y un `PING` local
+pendiente. Una escritura UART
+completa produce `ack` con etapa `forwarded`, que informa del envío. Solo un
+ACK del Mega con el ID y comando correspondientes produce `mega_accepted`.
+En `MEASURE` esta aceptación confirma el inicio de la captura; sus resultados
+llegan después como un evento `measurement` con su validez original.
+El timeout de confirmación es de tres segundos y nunca reenvía la orden.
+Los errores reales se transmiten como `action_error` con una razón acotada.
+
+Una caída WebSocket envía un `STOP` local de mejor esfuerzo si TX ya estaba
+habilitado, libera GP0 y elimina todas las órdenes pendientes. Un reinicio
+del Mega también invalida la cola. No se interpreta una confirmación antigua
+como la aceptación de una acción nueva. Los eventos `contact` identifican
+solo `fsr_a8`; no se les asigna una ubicación física del robot.
 
 El proveedor de conversación puede ejecutarse en la Raspberry o en la nube;
 este gateway transporta mensajes del robot y no ejecuta un modelo en el Pico.

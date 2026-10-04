@@ -60,7 +60,7 @@ def main():
                 page.on("request", lambda request: external.append(request.url) if not request.url.startswith(f"http://127.0.0.1:{server.server_port}") else None)
                 page.goto(f"http://127.0.0.1:{server.server_port}")
                 if args.semantic_memory:
-                    page.get_by_text("Memoria por significado disponible en tu Mac.", exact=True).wait_for(state="attached")
+                    page.get_by_text("Memoria por significado disponible.", exact=True).wait_for(state="attached")
                 page.get_by_role("button", name="Nuevo", exact=True).click()
                 page.get_by_label("Nombre o apodo").fill("Persona de prueba")
                 page.get_by_role("button", name="Crear perfil", exact=True).click()

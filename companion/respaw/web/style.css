@@ -410,6 +410,11 @@ dialog p {
     scroll-behavior:auto!important;
   }
 }
+#voice-audio {
+  width:100%;
+  margin:8px 0;
+  grid-column:1/-1;
+}
 @media(max-width:850px) {
   header {
     height:75px;
@@ -477,8 +482,5 @@ dialog p {
   }
   .profile-row {
     grid-column:2;
-  }
-  .presence>.wide {
-    display:none;
   }
 }

@@ -80,19 +80,29 @@ class Companion:
             with self.lock:
                 if session.generation != generation or session.request_id != request_id:
                     raise Cancelled("Respuesta descartada: la sesión cambió o se detuvo.")
-            answer = validate_reply(self.model.reply(session.name, history, memories), memories)
+            context = ({"robot_context": self.robot.snapshot()}
+                       if getattr(self.model, "supports_robot_context", False) else {})
+            answer = validate_reply(self.model.reply(session.name, history, memories, **context), memories)
+            cancelled = lambda: session.generation != generation or session.request_id != request_id
+            # Network acknowledgements can take seconds. STOP must be able to
+            # invalidate this turn while the transport waits for the Mega.
+            if getattr(self.robot, "supports_command_cancellation", False):
+                try:
+                    self.robot.command("FACE", answer["expression"], cancelled=cancelled)
+                except (RuntimeError, OSError):
+                    pass
             with self.lock:
-                if session.generation != generation or session.request_id != request_id:
+                if cancelled():
                     raise Cancelled("Respuesta descartada: la sesión cambió o se detuvo.")
+                if not getattr(self.robot, "supports_command_cancellation", False):
+                    try:
+                        self.robot.command("FACE", answer["expression"])
+                    except (RuntimeError, OSError):
+                        pass
                 session.history.append({"id": str(uuid.uuid4()), "role": "assistant", "content": answer["reply"]})
                 session.history = session.history[-40:]
                 sources = [m for m in memories if m["id"] in answer["memory_ids"]]
                 session.recent_memory_ids = [m["id"] for m in sources if m["kind"] == "episode"]
-                try:
-                    self.robot.command("FACE", answer["expression"])
-                except (RuntimeError, OSError):
-                    # A disconnected robot must not make the conversation unusable.
-                    pass
                 return {**answer, "user_message_id": user_message["id"],
                         "latency_ms": round((time.monotonic() - started) * 1000),
                         "sources": sources, "retrieval": dict(self.store.semantic_status)}
@@ -108,10 +118,10 @@ class Companion:
             session.request_id = None
             if self.speech:
                 self.speech.stop()
-            try:
-                self.robot.command("STOP")
-            except (RuntimeError, OSError):
-                pass
+        try:
+            self.robot.command("STOP")
+        except (RuntimeError, OSError):
+            pass
         return {"stopped": True}
 
     def save_memory(self, session_id, message_id, topic="", kind="episode", event_date=None):
@@ -152,10 +162,12 @@ class Companion:
 
     def choose_activity(self, session_id, activity):
         with self.lock:
-            session = self.session(session_id)
+            self.session(session_id)
             if activity not in ACTIVITIES:
                 raise ValueError("Actividad desconocida.")
-            self.stop(session_id)
+        self.stop(session_id)
+        with self.lock:
+            session = self.session(session_id)
             session.history.append({"id": str(uuid.uuid4()), "role": "user",
                                     "content": "He elegido: " + ACTIVITIES[activity]["name"]})
         return ACTIVITIES[activity]

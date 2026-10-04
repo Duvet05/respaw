@@ -1,13 +1,13 @@
 # Servidor de enlace en Raspberry Pi
 
 Este servicio conecta el Pico por WebSocket. Es independiente del companion:
-todavía no ejecuta el modelo, guarda recuerdos ni sintetiza voz. La Raspberry Pi
-4 de Católica tiene capacidad suficiente para este tramo; se permite añadir un
-proveedor de IA en nube cuando se integre la conversación.
+no ejecuta el modelo, guarda recuerdos ni sintetiza voz. Un servicio separado,
+`respaw-companion.service`, integra GPT, memoria y voz mediante su operador
+local: [guía del acompañante en Raspberry](companion-raspberry.md).
 
 La instalación del 3 de octubre de 2026 usa:
 
-- Release: `~/.local/share/respaw/releases/20261003-link/`.
+- Release activo: `~/.local/share/respaw/releases/20261003-companion/`.
 - Código activo: `~/.local/share/respaw/current`.
 - Python: `~/.local/share/respaw/venv-link/`.
 - Configuración: `~/.local/state/respaw/link.env`.
@@ -92,11 +92,18 @@ ssh raspberry-ts '~/.local/share/respaw/venv-link/bin/python ~/.local/share/resp
 ssh raspberry-ts '~/.local/share/respaw/venv-link/bin/python ~/.local/share/respaw/current/tools/robot_link_client.py --token-file ~/.local/state/respaw/link.token action FACE warm'
 ```
 
-El gateway inicial contesta `mega_unavailable`: recibir una orden en el Pico no
-significa que el Mega la ejecutó. Ese resultado termina la solicitud y el CLI
-sale con código 2. La traducción UART se prueba aparte sin transmitir a GP0.
+El gateway bidireccional informa `forwarded` después de escribir UART y solo
+devuelve `mega_accepted` al recibir un ACK real del Mega. `forwarded` no termina
+la solicitud. Sin TX habilitado y un PING confirmado, devuelve un error y el CLI
+sale con código 2. GP0 está deshabilitado en el Pico de esta instalación mientras
+se confirma el montaje. Un ACK certifica aceptación, no observación de la TFT.
 No se reenvían órdenes pendientes después de una desconexión. Las órdenes no
 confirmadas caducan a los diez segundos.
+
+`status.command_ready` exige el puente habilitado y estado fresco. Se reservan
+plazas para STOP; el companion usa secuencias para descartar FACE antiguo si
+STOP llegó antes. Contacto y capacidades vencen a los seis segundos (36 durante
+una captura); una trama posterior no recupera un contacto anterior.
 
 `--face-on-connect warm` sirve para una prueba explícita del servidor; el
 servicio normal no ejecuta gestos al reconectar. Los eventos reales llevan

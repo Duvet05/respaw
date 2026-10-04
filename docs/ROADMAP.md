@@ -10,17 +10,17 @@ prueba de parser o un log del Pico no certifica la cara dibujada por el Mega.
 | --- | --- | --- |
 | 1. Servidor de enlace | Raspberry recibe `hello`, autentica el robot, mantiene latidos y rechaza entradas inválidas | Desplegado y verificado por Internet; once pruebas pasaron en la Raspberry |
 | 2. Pico por Wi-Fi | Configuración móvil, conexión WSS con TLS verificado, reinicio y reconexión | Gateway instalado; pendiente de configurar una red de 2,4 GHz real y verificar conexión física |
-| 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Pendiente; conservar el USB para diagnóstico con parser y respuestas separados |
+| 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Implementado y compilado; pendiente de confirmar montaje y cargar Mega. TX del Pico deshabilitado |
 | 4. Primer gesto | Server → Pico → Mega → TFT; confirmación del Mega y observación de la cara | Pendiente del Mega, TFT y cableado con adaptación de nivel |
-| 5. Primer evento físico | Contacto → Mega → Pico → servidor con ubicación y estado | Pendiente; definir sensor y publicar evento sin duplicar una pulsación |
-| 6. Cerebro y memoria | Companion usa el enlace del robot y recupera recuerdos del perfil correcto entre sesiones | Pendiente de integrar el transporte; la memoria del companion ya existe |
-| 7. Modelo en nube | Proveedor explícito, credencial en el servidor, mismas validaciones de respuesta y cancelación | Autorizado por el usuario; proveedor y credencial pendientes |
-| 8. Voz en el robot | Micrófono → STT → respuesta → TTS → parlante, con STOP | Pendiente de decidir hardware y transporte; DFPlayer reproduce pistas, no voz generada arbitraria |
+| 5. Primer evento físico | Contacto → Mega → Pico → servidor con sensor y estado | FSR A8 implementado; pendiente de presión física y recepción real |
+| 6. Cerebro y memoria | Companion usa el enlace del robot y recupera recuerdos del perfil correcto entre sesiones | Integrado y desplegado; pruebas de memoria y sockets con fixtures pasan. Conversación real GPT pendiente de clave |
+| 7. Modelo en nube | Proveedor explícito, credencial en el servidor, mismas validaciones de respuesta y cancelación | GPT seleccionado; adaptador probado con fixtures. Clave y consulta real pendientes |
+| 8. Voz en el robot | Micrófono → STT → respuesta → TTS → parlante, con STOP | Voz del navegador implementada y probada con WAV local; claves y audio al parlante del robot pendientes |
 
-Para el hito 3 hay que extender el componente responsable: el parser del Mega.
-Enviar al D19 una línea que hoy solo se procesa por USB no completa el hito.
-Cada transporte necesita su buffer y la respuesta dirigida al emisor. Antes de
-permitir varios controladores simultáneos hay que definir quién controla al robot.
+El hito 3 incorpora el parser de producción del Mega en ambos puertos, con
+buffers separados y respuestas al solicitante. Solo un controlador conserva
+la propiedad mediante PING; STOP está disponible desde ambos. La prueba con
+streams simulados no sustituye la carga y comprobación física del montaje.
 
 ## Pruebas del Pico
 
@@ -79,4 +79,5 @@ inválidos, latidos y conexiones nuevas. Las pruebas físicas y la configuració
 del gateway se documentan por separado, con resultados obtenidos, no esperados.
 No requieren descargar un LLM para validar el enlace.
 
-Consultar el [informe de verificación del 3 de octubre](verificacion-enlace-2026-10-03.md).
+Consultar la [verificación inicial](verificacion-enlace-2026-10-03.md) y la
+[integración del 3 de octubre](verificacion-integracion-2026-10-03.md).

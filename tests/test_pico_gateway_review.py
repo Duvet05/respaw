@@ -8,12 +8,17 @@ import json
 from pathlib import Path
 import struct
 import sys
+from types import SimpleNamespace
 import unittest
 from urllib.parse import urlsplit
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pico/source/respaw-gateway"))
+sys.path.insert(0, str(ROOT / "pico/source/respaw-v2"))
 from respaw_gateway import config, portal
+from respaw_gateway.bridge import CommandBridge, MAX_PENDING
+from respaw_gateway import bridge as bridge_module
 from respaw_gateway.vendor.aiohttp_ws import WebSocketClient
 
 HAS_WEBSOCKETS = importlib.util.find_spec("websockets") is not None
@@ -76,6 +81,179 @@ class ConfigBoundaryTests(unittest.TestCase):
                                    ("server_url", value["server_url"] + "\n")):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 config.validate({**value, field: replacement})
+
+    def test_ap_password_minimum_and_explicit_uart_flag(self):
+        self.assertTrue(config.validate({**self.config(), "ap_password": "12345678"}))
+        for fields in ({"ap_password": "1234567"}, {"ap_password": "a" * 64}, {"uart_commands": 1}):
+            with self.subTest(fields=fields), self.assertRaises(ValueError):
+                config.validate({**self.config(), **fields})
+        self.assertTrue(config.validate({**self.config(), "uart_commands": False}))
+
+
+class BridgeBoundaryTests(unittest.TestCase):
+    def make_bridge(self, enabled=True, commands=True):
+        self.writes, self.tx_changes = [], []
+        self.short_write = False
+
+        def write(line):
+            self.writes.append(line)
+            return len(line) - 1 if self.short_write else len(line)
+
+        bridge = CommandBridge(write, self.tx_changes.append, enabled)
+        bridge.connect()
+        bridge.observe({"v": 1, "type": "ready", "board": "mega2560", "sensor": True,
+                        "audio": False, "commands": commands}, 0)
+        bridge.service(0)
+        return bridge
+
+    def own(self, bridge, now=1):
+        bridge.observe({"v": 1, "type": "ack", "id": bridge.local_pending[0], "command": "PING"}, now)
+        self.assertTrue(bridge.owned)
+
+    def face(self, ident=500):
+        return {"v": 1, "type": "action", "id": ident, "command": "FACE", "argument": "warm"}
+
+    def test_tx_requires_explicit_flag_and_actual_capability(self):
+        for enabled, commands in ((False, True), (True, False)):
+            with self.subTest(enabled=enabled, commands=commands):
+                bridge = self.make_bridge(enabled, commands)
+                self.assertEqual(self.writes, [])
+                self.assertFalse(bridge.tx_enabled)
+                self.assertFalse(bridge.command_ready(1))
+                self.assertEqual(bridge.submit(self.face(), 1)["type"], "action_error")
+
+    def test_only_matching_real_mega_ack_is_terminal_and_ids_are_mapped(self):
+        bridge = self.make_bridge()
+        self.own(bridge)
+        forwarded = bridge.submit(self.face(32768), 2)
+        self.assertEqual(forwarded["stage"], "forwarded")
+        self.assertEqual(forwarded["uart_line"], "V1 32768 FACE warm\n")
+        self.assertEqual(self.writes[-1], b"V1 1 FACE warm\n")
+        self.assertEqual(bridge.observe({"v": 1, "type": "ack", "id": 32768, "command": "PING"}, 3), [])
+        accepted = bridge.observe({"v": 1, "type": "ack", "id": 1, "command": "FACE"}, 4)
+        self.assertEqual(accepted, [{**forwarded, "stage": "mega_accepted"}])
+        self.assertEqual(bridge.observe({"v": 1, "type": "ack", "id": 1, "command": "FACE"}, 5), [])
+
+    def test_wrong_command_cannot_accept_action(self):
+        bridge = self.make_bridge()
+        self.own(bridge)
+        bridge.submit(self.face(), 2)
+        result = bridge.observe({"v": 1, "type": "ack", "id": 1, "command": "STOP"}, 3)
+        self.assertEqual(result[0]["reason"], "bad_frame")
+
+    def test_partial_uart_write_never_announces_forwarded_and_never_retries_action(self):
+        bridge = self.make_bridge()
+        self.own(bridge)
+        self.short_write = True
+        result = bridge.submit(self.face(), 2)
+        self.assertEqual(result["reason"], "uart_write_failed")
+        self.assertNotIn("stage", result)
+        self.assertFalse(bridge.tx_enabled)
+        count = len(self.writes)
+        bridge.service(1000)
+        self.assertEqual(len(self.writes), count)
+
+    def test_pending_bound_and_timeout_do_not_replay_actions(self):
+        bridge = self.make_bridge()
+        self.own(bridge)
+        for ident in range(100, 100 + MAX_PENDING - 1):
+            self.assertEqual(bridge.submit(self.face(ident), 2)["stage"], "forwarded")
+        self.assertEqual(bridge.submit(self.face(999), 2)["reason"], "too_many_pending")
+        stop = {"v": 1, "type": "action", "id": 999, "command": "STOP"}
+        self.assertEqual(bridge.submit(stop, 2)["stage"], "forwarded")
+        self.assertEqual(len(bridge.pending), MAX_PENDING)
+        results = bridge.service(3002)
+        self.assertEqual(len(results), MAX_PENDING)
+        self.assertTrue(all(result["reason"] == "ack_timeout" for result in results))
+        self.assertEqual(sum(b" FACE " in line for line in self.writes), MAX_PENDING - 1)
+        self.assertEqual(sum(b" STOP\n" in line for line in self.writes), 1)
+        self.assertEqual(bridge.observe({"v": 1, "type": "ack", "id": 1, "command": "FACE"}, 3003), [])
+
+    def test_disconnect_stops_releases_tx_and_late_ack_cannot_match_reconnect(self):
+        bridge = self.make_bridge()
+        self.own(bridge)
+        bridge.submit(self.face(500), 2)
+        bridge.disconnect(3)
+        self.assertTrue(self.writes[-1].endswith(b" STOP\n"))
+        self.assertFalse(bridge.tx_enabled)
+        self.assertEqual(bridge.pending, {})
+        bridge.connect()
+        bridge.service(4)
+        self.own(bridge, 5)
+        bridge.submit(self.face(501), 6)
+        self.assertEqual(self.writes[-1], b"V1 2 FACE warm\n")
+        self.assertEqual(bridge.observe({"v": 1, "type": "ack", "id": 1, "command": "FACE"}, 7), [])
+        self.assertEqual(bridge.observe({"v": 1, "type": "ack", "id": 2, "command": "FACE"}, 8)[0]["id"], 501)
+
+    def test_reboot_invalidates_pending_and_controller_busy_is_truthful(self):
+        bridge = self.make_bridge()
+        local_id = bridge.local_pending[0]
+        bridge.observe({"v": 1, "type": "error", "id": local_id, "reason": "controller_busy"}, 1)
+        self.assertEqual(bridge.submit(self.face(), 2)["reason"], "controller_busy")
+        bridge.service(2000)
+        self.own(bridge, 2001)
+        bridge.submit(self.face(), 2002)
+        result = bridge.observe({"v": 1, "type": "ready", "board": "mega2560", "sensor": True,
+                                 "audio": False, "commands": True}, 2003)
+        self.assertEqual(result[0]["reason"], "mega_unavailable")
+        self.assertFalse(bridge.tx_enabled)
+        self.assertFalse(bridge.owned)
+
+    def test_correlated_ping_keeps_capability_live_during_silent_measurement(self):
+        bridge = self.make_bridge()
+        self.assertFalse(bridge.command_ready(0))
+        self.own(bridge)
+        self.assertTrue(bridge.command_ready(1))
+        for now in range(2000, 32000, 2000):
+            bridge.service(now)
+            self.own(bridge, now + 1)
+        self.assertEqual(bridge.submit(self.face(), 32000)["stage"], "forwarded")
+        bridge.service(38002)
+        self.assertFalse(bridge.tx_enabled)
+        self.assertFalse(bridge.command_ready(38002))
+
+    def test_ticks_wrap_does_not_expire_a_recent_action(self):
+        period = 1 << 30
+
+        def wrapped_diff(now, before):
+            return ((now - before + period // 2) % period) - period // 2
+
+        with patch.object(bridge_module, "ticks_diff", wrapped_diff):
+            writes = []
+            bridge = CommandBridge(lambda line: writes.append(line) or len(line), lambda enabled: None, True)
+            bridge.connect()
+            bridge.observe({"type": "ready", "commands": True}, period - 1000)
+            bridge.service(period - 1000)
+            bridge.observe({"type": "ack", "id": bridge.local_pending[0], "command": "PING"}, period - 999)
+            self.assertEqual(bridge.submit(self.face(), period - 500)["stage"], "forwarded")
+            self.assertEqual(bridge.service(500), [])
+            self.assertEqual(bridge.observe({"type": "ack", "id": 1, "command": "FACE"}, 1000)[0]["stage"], "mega_accepted")
+
+
+class GatewayDriverTests(unittest.TestCase):
+    def test_tx_mux_changes_preserve_partial_rx_contact(self):
+        calls = []
+
+        def pin(*args, **kwargs):
+            calls.append((args, kwargs))
+
+        pin.ALT, pin.ALT_UART, pin.IN = 7, 2, 0
+        stubs = {"machine": SimpleNamespace(Pin=pin), "network": SimpleNamespace(),
+                 "receiver": SimpleNamespace(open_uart=None)}
+        source = ROOT / "pico/source/respaw-gateway/respaw_gateway/gateway.py"
+        spec = importlib.util.spec_from_file_location("respaw_gateway.gateway_driver_test", source)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, stubs):
+            spec.loader.exec_module(module)
+        module.emit = lambda *args, **kwargs: None
+        gateway = module.Gateway.__new__(module.Gateway)
+        partial_contact = bytearray(b'{"v":1,"type":"contact",')
+        gateway.receiver = SimpleNamespace(buffer=partial_contact, discard=False)
+        gateway.uart = SimpleNamespace(init=lambda **kwargs: self.fail("TX mux must not reset the RX UART"))
+        gateway.set_uart_tx(True)
+        gateway.set_uart_tx(False)
+        self.assertIs(gateway.receiver.buffer, partial_contact)
+        self.assertEqual(calls, [((0, pin.ALT), {"alt": pin.ALT_UART}), ((0, pin.IN), {})])
 
 
 class FrameBoundaryTests(unittest.IsolatedAsyncioTestCase):
@@ -227,8 +405,9 @@ class NativeClientIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     await client.connect(uri, handshake_request=request)
                     await client.send(encode({"v": 1, "type": "hello", "robot_id": "test_pico", "transport": "wifi"}))
                     self.assertEqual(await receive(client), {"v": 1, "type": "welcome", "robot_id": "test_pico"})
-                    await client.send(encode({"v": 1, "type": "heartbeat", "id": 1}))
+                    await client.send(encode({"v": 1, "type": "heartbeat", "id": 1, "command_ready": False}))
                     self.assertEqual(await receive(client), {"v": 1, "type": "heartbeat_ack", "id": 1})
+                    self.assertFalse(probe.status()["command_ready"])
                     result = await probe.send_action("FACE", "warm")
                     action = await receive(client)
                     action_ids.append(action["id"])
