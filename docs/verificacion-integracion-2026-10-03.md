@@ -65,8 +65,9 @@ micrófono físico y el recorrido de una conversación hablada real quedan pendi
   se simplificó por petición del usuario; permanece fuera de Git.
 - `uart_commands:false`: GP0 sigue como entrada hasta confirmar el cableado.
 - Portal `ResPaw-Setup-912E`, http://192.168.4.1, observado en arranque físico.
-- Wi-Fi de 2,4 GHz aún pendiente de configurar. No se ha verificado WSS desde
-  el Pico físico; la prueba pública anterior usó un cliente CPython.
+- El usuario configuró el Wi-Fi desde el portal y la Raspberry observó el
+  enlace WSS nativo del Pico físico. La prueba pública inicial con CPython
+  permanece como antecedente; esta conexión usa el gateway instalado.
 - Respaldo previo privado en `/tmp/respaw-gateway-bidir-install-20261003/` y
   segunda copia en la Raspberry; los 18 archivos previos se verificaron por SHA256.
 
@@ -90,8 +91,55 @@ local: `/tmp/respaw-pico-ap-fix-20261003/`; segunda copia:
 La lectura posterior del Pico confirmó AP activo, SSID `ResPaw-Setup-912E`,
 dirección `192.168.4.1`, seguridad `4194310` y contraseña esperada conservada.
 La regresión del portal rechaza el enum genérico incorrecto en un fixture RP2;
-`make check` pasó con 175 pruebas y WebSocket instalado. La autenticación desde
-el teléfono y la conexión Wi-Fi/WSS siguen pendientes de confirmación real.
+`make check` pasó con 175 pruebas y WebSocket instalado. El usuario confirmó
+que el teléfono aceptó la contraseña corregida y luego guardó su red Wi-Fi.
+La corrección `1c9e4bc` se subió y la ejecución de CI `37168086474` pasó.
+
+### Enlace Wi-Fi real del Pico
+
+El operador real de la Raspberry registró `robot_id:e66368254f3e912e`,
+`connected:true` y `transport:wifi` en siete consultas durante dos minutos,
+con antigüedad del último latido entre 1375 y 3969 ms. Es el Pico nativo
+conectado por Internet y WSS; esta conexión no usa un cliente CPython ni un
+relevo de la Mac.
+
+Una lectura USB pasiva del Pico, sin enviar caracteres ni detener su programa,
+recogió el evento real `gateway_connected` de esa identidad con
+`transport:wifi`, `tls_verified:true`, `uart_commands_enabled:false` y
+`mega_commands:false`. Evidencia: `native-usb-log.json` en la carpeta privada
+de la prueba. Este registro corrobora el gateway nativo y la verificación TLS
+en la placa.
+
+El mismo estado informó `mega_connected:false`, `command_ready:false`,
+`capabilities:null` y `contact:null`. El cuerpo sigue sin disponibilidad y
+`uart_commands:false` permanece guardado. El enlace Wi-Fi no confirma montaje
+UART, presión de FSR ni dibujo en TFT. Un colaborador mecatrónico está
+revisando el montaje manual pendiente.
+
+Se reinició únicamente `respaw-link.service`, con MainPID de `31583` a
+`46804`. La primera consulta al nuevo proceso, a las 01:33:33 UTC, ya mostró
+`connected:true`, `transport:wifi` y un latido con antigüedad de 2246 ms.
+Ocho muestras del proceso nuevo mantuvieron la conexión; el último latido
+tenía 613 ms. Esto comprueba recuperación real del Pico nativo tras reiniciar
+el servidor de enlace.
+
+La API del companion en producción también respondió HTTP 200 en
+`/api/status`: robot `simulated:false`, `connected:true`, `ready:false` y
+`transport:wifi`, con capacidades, contacto y pulso ausentes. El companion
+reconoce el enlace del Pico y conserva el cuerpo como no disponible.
+
+El operador envió además un PING real por Wi-Fi al Pico. La respuesta fue
+`command_result` con `id:64210`, `stage:error` y `reason:mega_unavailable`.
+Esto verifica el recorrido servidor → Pico → servidor. Es el error esperado
+con el cuerpo no disponible: no se envió ni confirmó ejecución en el Mega y
+no se habilitó ningún GPIO de salida. No representa un fallo de WSS.
+
+Evidencia privada local:
+`/tmp/respaw-pico-ap-fix-20261003/server-observation.json` y
+`/tmp/respaw-pico-ap-fix-20261003/reconnection-observation.json`; sus copias en
+la Raspberry están guardadas en `~/.cache/respaw/live-native-20261003/`, junto
+con `companion-status.json` y `command-path.json`. La prueba de PING también
+se copió a `/tmp/respaw-pico-ap-fix-20261003/command-path.json` en la Mac.
 
 ## Mega conectado
 
@@ -132,7 +180,8 @@ contacto A8. No demuestra dibujo en TFT ni presión observada en la placa.
 
 ## Navegador y pendientes
 
-`make check` pasó con 174 pruebas, validación de JavaScript y revisión del diff.
+La verificación final `make check` pasó con 175 pruebas, validación de
+JavaScript y revisión del diff; la ejecución de CI `37168086474` pasó.
 Pasaron los smokes habituales y `tests/browser_voice_smoke.py` en Chrome con
 Playwright 1.62.0: WAV reproducible, STOP durante reproducción y síntesis,
 audio tardío descartado al cambiar sesión, controles móviles y configuración
@@ -153,9 +202,9 @@ desconexión/reconexión, error de poll y disposición móvil. No invocó modelo
 voz ni guardado de recuerdos. Las capturas están en
 `/tmp/respaw-contact-browser-evidence/`; no muestran hardware conectado.
 
-Para completar el recorrido real faltan: configurar Wi-Fi del Pico, montar
-D18→GP1 adaptado de 5 V a 3,3 V, GP0→D19 y GND común; habilitar TX después de
-confirmar el montaje; comprobar contacto, ACK y cara en TFT; después probar
+Para completar el recorrido real faltan: montar D18→GP1 adaptado de 5 V a
+3,3 V, GP0→D19 y GND común; habilitar TX después de confirmar el montaje;
+comprobar contacto, ACK y cara en TFT; después probar
 conversación, memoria y voz junto al cuerpo. GPT, recuperación de memoria y
 generación de MP3 y STT de audio sintético ya pasaron con proveedores reales;
 falta comprobar el micrófono físico, el ciclo hablado real y llevar el audio

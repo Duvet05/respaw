@@ -59,8 +59,10 @@ si falla Ollama. La Raspberry usa el proveedor GPT explícito, con credenciales
 privadas instaladas. Pasaron dos turnos reales, recuperación de un recuerdo
 ficticio entre sesiones e instancias, generación de MP3 con ElevenLabs y
 transcripción OpenAI de ese audio sintético mediante la API de producción.
-El Pico, el cuerpo, el micrófono físico y el audio al parlante siguen pendientes;
-los resultados están en el [informe de integración](docs/verificacion-integracion-2026-10-03.md).
+El Pico nativo ya conecta por Wi-Fi y WSS a la Raspberry tras el setup móvil
+y recupera el enlace después de reiniciar el servicio de enlace.
+El cuerpo sigue sin disponibilidad; UART, micrófono físico y parlante están pendientes.
+Los resultados están en el [informe de integración](docs/verificacion-integracion-2026-10-03.md).
 
 ## Archivo de recuperación de Pico W y Mega 2560
 

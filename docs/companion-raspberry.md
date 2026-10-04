@@ -133,10 +133,20 @@ Cada consentimiento usa la generación vigente del servidor: una activación o
 respuesta tardía anterior a Detener o a otra sesión no puede rearmarla. El
 contacto y su identificador efímero viven en RAM y no forman un historial.
 
-La conexión física sigue pendiente: el usuario confirmó que Mega y Pico no
-tienen cables UART. Se cargó Mega v2 y se comprobó el protocolo por USB; el
-Pico mantiene TX deshabilitado y todavía necesita configurar su Wi-Fi. Las
-pruebas de esta opción con un transporte fixture no demuestran un gesto en TFT.
+El usuario configuró el Wi-Fi desde el portal corregido del Pico. La Raspberry
+observó su conexión WSS nativa (`connected:true`, `transport:wifi`) en siete
+consultas durante dos minutos, sin un relevo de la Mac. El cuerpo continúa
+sin disponibilidad: `mega_connected:false`, `command_ready:false`, capacidades
+y contacto ausentes. «Responder al contacto» permanece inactivo en ese estado.
+
+El usuario confirmó que Mega y Pico no tienen cables UART. Se cargó Mega v2 y
+se comprobó el protocolo por USB; TX del Pico sigue deshabilitado y el montaje
+manual está en revisión. Las pruebas con fixtures no demuestran un gesto en
+TFT. El Pico recuperó WSS después de reiniciar `respaw-link.service`, con ocho
+consultas conectadas al proceso nuevo. La API de producción del companion
+respondió HTTP 200 y ve el Pico conectado, con `ready:false`. Un PING nativo
+recibió `mega_unavailable`, confirmando ida y vuelta de red sin habilitar TX
+ni ejecutar una orden en el Mega.
 
 Consultar la [verificación del despliegue](verificacion-integracion-2026-10-03.md)
 para distinguir pruebas con fixtures de conexión y conversación físicas.

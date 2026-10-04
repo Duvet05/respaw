@@ -9,7 +9,7 @@ prueba de parser o un log del Pico no certifica la cara dibujada por el Mega.
 | Hito | Resultado requerido | Estado |
 | --- | --- | --- |
 | 1. Servidor de enlace | Raspberry recibe `hello`, autentica el robot, mantiene latidos y rechaza entradas inválidas | Desplegado y verificado por Internet; once pruebas pasaron en la Raspberry |
-| 2. Pico por Wi-Fi | Configuración móvil, conexión WSS con TLS verificado, reinicio y reconexión | Gateway instalado; pendiente de configurar una red de 2,4 GHz real y verificar conexión física |
+| 2. Pico por Wi-Fi | Configuración móvil, conexión WSS con TLS verificado, reinicio y reconexión | Setup móvil, WSS nativo y recuperación tras reiniciar el servidor verificados; PING de ida y vuelta devuelve el error esperado mega_unavailable con TX deshabilitado |
 | 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Mega v2 cargado y protocolo USB físico comprobado; usuario confirmó ausencia de cables UART. TX del Pico deshabilitado |
 | 4. Primer gesto | Server → Pico → Mega → TFT; confirmación del Mega y observación de la cara | Pendiente del Mega, TFT y cableado con adaptación de nivel |
 | 5. Primer evento físico | Contacto → Mega → Pico → servidor con sensor y estado | FSR A8 y reacción opcional por sesión implementados; pendiente de presión física controlada, recepción real y gesto observado |
@@ -30,6 +30,14 @@ solo pulsos nuevos de hasta dos segundos y no consultar GPT ni guardar
 recuerdos. Probar STOP, sesión nueva, desconexión, 30 segundos sin presencia
 web y activaciones tardías con generación vieja antes de habilitar el montaje
 físico. La casilla vuelve desmarcada después de esos cambios y de reconectar.
+
+El enlace real del Pico informa `connected:true` y `transport:wifi`, pero
+`mega_connected:false` y `command_ready:false`; capacidades y contacto están
+ausentes. El TX del Pico permanece deshabilitado mientras se revisa el montaje.
+La conexión de red no completa los hitos de gesto, sensor ni parlante.
+El reinicio del servidor de enlace ya pasó con ocho consultas conectadas al
+proceso nuevo. La API del companion ve `connected:true` y `ready:false`;
+queda pendiente comprobar reinicio eléctrico del Pico y caída del router.
 
 ## Pruebas del Pico
 

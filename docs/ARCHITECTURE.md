@@ -29,9 +29,9 @@ el código existente de las conexiones que todavía deben completarse.
 | Companion, `companion/respaw/` | Implementado y desplegado | Ollama local o GPT explícito; sesiones; memoria SQLite/FTS y embeddings locales opcionales; corrección y olvido; transporte `NetworkRobot` |
 | Interfaz del companion | Implementado, local | HTTP en `127.0.0.1:8765`; token de sesión y comprobación de origen; perfiles sin autenticación de cuentas remotas |
 | Mega v2, `mega2560/source/respaw-v2/` | Cargado; protocolo USB físico comprobado | TFT, FSR, MAX30102 y DFPlayer; órdenes por USB y Serial1 con buffers separados, propietario por PING y contacto A8; montaje UART y gesto observado pendientes |
-| Pico v2, `pico/source/respaw-v2/` | Implementado | Receptor UART con límites, validación y caducidad; consola USB; Wi-Fi desactivado |
+| Pico v2, `pico/source/respaw-v2/` | Implementado y reutilizado por el gateway | Receptor UART con límites, validación y caducidad; consola USB; el gateway añade conectividad |
 | Servidor de enlace, `tools/robot_link_server.py` | Implementado y desplegado en Raspberry | WebSocket autenticado; identificación del Pico; latidos; eventos y órdenes de prueba. No ejecuta conversación ni guarda recuerdos |
-| Pico gateway, `pico/source/respaw-gateway/` | Instalado; Wi-Fi físico pendiente de setup | Configuración Wi-Fi y enlace WSS. La guía del gateway y el informe de verificación distinguen pruebas de implementación |
+| Pico gateway, `pico/source/respaw-gateway/` | Wi-Fi, WSS y reconexión físicos verificados | Setup móvil; conexión nativa y recuperación tras reiniciar el servidor. PING devuelve mega_unavailable con el cuerpo desconectado; TX sigue deshabilitado |
 | Mega ↔ Pico bidireccional | Código integrado; montaje pendiente | TX del gateway requiere habilitación explícita, capacidad del Mega y PING confirmado; los IDs y ACK están correlacionados |
 | Contacto → evento → decisión → gesto | Código integrado; prueba física pendiente | Opción por sesión «Responder al contacto»: presión nueva y fresca solicita `FACE listening` sin GPT, voz ni memoria; contexto físico actual para conversación aparte |
 | Proveedor de conversación en nube | Credencial instalada; GPT real verificado | Dos turnos gpt-4o-mini y recuperación de memoria con SQLite temporal; Responses con esquema estricto y `store:false`; no cambia automáticamente a Ollama |
@@ -136,6 +136,15 @@ Mac y la Raspberry permite administrarlas, pero el Pico no participa en esa
 VPN. Se prepara un endpoint WSS mediante Funnel, con el mismo protocolo que
 usaría una conexión LAN. TLS termina en Funnel y se verifica desde el Pico.
 
+El Pico físico `e66368254f3e912e` ya configuró su Wi-Fi mediante el portal y
+se conectó con el gateway nativo: siete consultas en dos minutos mostraron
+`connected:true` y `transport:wifi` en la Raspberry. `mega_connected` y
+`command_ready` siguieron en `false`, con capacidades y contacto ausentes.
+Después de reiniciar el servicio de enlace, ocho consultas al proceso nuevo
+confirmaron la reconexión nativa. El companion también ve el Pico conectado,
+pero `ready:false`. Un PING por WSS obtuvo `mega_unavailable`, confirmando
+el recorrido de ida y vuelta con TX deshabilitado; el cuerpo sigue pendiente.
+
 ```mermaid
 flowchart LR
     Pico[Pico W] -->|Wi-Fi 2,4 GHz e Internet| Funnel[Funnel: TLS]
@@ -187,4 +196,6 @@ su memoria; proveedor de IA y voz. Los criterios verificables están en el
 
 La [guía del servidor](server-link.md) describe el despliegue en la Raspberry.
 El [informe del 3 de octubre](verificacion-enlace-2026-10-03.md) registra las
-pruebas realizadas y el paso de configuración Wi-Fi pendiente.
+pruebas iniciales antes del setup. El [informe de integración](verificacion-integracion-2026-10-03.md)
+registra la configuración móvil y el enlace WSS real del Pico, junto al montaje
+corporal que sigue pendiente.
