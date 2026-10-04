@@ -54,6 +54,11 @@ contiene tamaños, hashes y resultados, sin valores secretos.
    avanzados permiten sustituirlos; el token actual nunca aparece en el HTML.
 4. El Pico se reinicia. Volver el teléfono a su red habitual.
 
+Si el teléfono había guardado esta red antes de corregir su seguridad,
+seleccionar **Olvidar esta red** y conectarse otra vez con la clave de
+emparejamiento. El portal usa la constante WPA/WPA2 del driver RP2/CYW43;
+los valores genéricos de otros puertos MicroPython no son intercambiables.
+
 Los ajustes se guardan de forma atómica en `respaw-gateway-config.json`.
 La página solo escucha en la dirección privada del AP, requiere un formulario
 de esa misma dirección y limita clientes, cabeceras y cuerpo de solicitud.

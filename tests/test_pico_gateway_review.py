@@ -346,6 +346,53 @@ class HandshakeBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
 
 class PortalBoundaryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_ap_accepts_supported_cyw43_security_instead_of_generic_enum(self):
+        class WLAN:
+            IF_AP = 1
+            # Exact public constant in RP2 MicroPython v1.26.1 / CYW43.
+            SEC_WPA_WPA2 = 0x00400006
+            SEC_OPEN, SEC_WPA3, SEC_WPA2_WPA3 = 0, 0x01000004, 0x01400004
+
+            def __init__(self, interface):
+                self.assert_ap = interface == self.IF_AP
+                self.enabled = True  # AP can survive a soft reset.
+
+            def active(self, value):
+                self.enabled = value
+
+            def config(self, **values):
+                if values["security"] not in (self.SEC_OPEN, self.SEC_WPA_WPA2,
+                                               self.SEC_WPA3, self.SEC_WPA2_WPA3):
+                    raise ValueError("Unsupported CYW43 security")
+                self.settings = values
+
+            def ifconfig(self, values):
+                self.addresses = values
+
+        with self.assertRaises(ValueError):
+            WLAN(WLAN.IF_AP).config(security=3)
+
+        setup = portal.Portal.__new__(portal.Portal)
+        setup.server, setup.ap = None, None
+        setup.ssid = "ResPaw-Setup-TEST"
+        setup.value = {"ap_password": "fixturepass"}
+        server = SimpleNamespace()
+
+        async def start_server(callback, address, port, backlog):
+            self.assertEqual((address, port, backlog), (portal.AP_ADDRESS, 80, 2))
+            self.assertTrue(setup.ap.enabled)
+            return server
+
+        with patch.dict(sys.modules, {"network": SimpleNamespace(WLAN=WLAN)}), \
+                patch.object(portal.asyncio, "start_server", start_server), patch("builtins.print"):
+            await setup.start()
+            await setup.start()  # Already running: preserve the existing socket.
+        self.assertTrue(setup.ap.assert_ap)
+        self.assertIs(setup.server, server)
+        self.assertEqual(setup.ap.settings,
+                         {"ssid": setup.ssid, "security": WLAN.SEC_WPA_WPA2, "key": "fixturepass"})
+        self.assertEqual(setup.ap.addresses[0], portal.AP_ADDRESS)
+
     async def test_oversize_body_and_foreign_origins_are_rejected_before_reading_body(self):
         for headers in (b"Content-Length: 2049\r\n", b"Content-Length: 65536\r\n",
                         b"Origin: https://foreign.example\r\n", b"Host: duplicate\r\n"):

@@ -177,7 +177,8 @@ class Portal:
             return
         import network
         self.ap = network.WLAN(network.WLAN.IF_AP)
-        self.ap.config(ssid=self.ssid, security=3, key=self.value["ap_password"])
+        self.ap.config(ssid=self.ssid, security=network.WLAN.SEC_WPA_WPA2,
+                       key=self.value["ap_password"])
         self.ap.active(True)
         self.ap.ifconfig((AP_ADDRESS, "255.255.255.0", AP_ADDRESS, AP_ADDRESS))
         self.server = await asyncio.start_server(self.handle, AP_ADDRESS, 80, backlog=2)

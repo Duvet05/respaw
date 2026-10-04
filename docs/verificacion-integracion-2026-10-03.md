@@ -70,6 +70,29 @@ micrófono físico y el recorrido de una conversación hablada real quedan pendi
 - Respaldo previo privado en `/tmp/respaw-gateway-bidir-install-20261003/` y
   segunda copia en la Raspberry; los 18 archivos previos se verificaron por SHA256.
 
+### Corrección del acceso al portal
+
+Ante el rechazo de la contraseña desde el teléfono, la lectura del Pico confirmó
+que la clave guardada era la esperada y el AP estaba activo en `192.168.4.1`.
+El fallo estaba en `security=3`: el driver RP2 de MicroPython 1.26.1 pasa ese
+valor directamente a CYW43. La constante pública admitida para WPA/WPA2 es
+`network.WLAN.SEC_WPA_WPA2`, que vale `4194310` en esta placa.
+[Fuente oficial del driver](https://github.com/micropython/micropython/blob/v1.26.1/extmod/network_cyw43.c#L514).
+
+Se corrigió e instaló únicamente `respaw_gateway/portal.py`, conservando
+byte por byte la configuración privada y sin habilitar UART. SHA256 instalado:
+`33cba95e372433a60b3539dc067f09811dcbb30d45212814f6ac265e0ac15d13`.
+Antes de escribir se leyeron dos veces los 19 archivos del Pico; su respaldo
+también se copió a la Raspberry y se verificó por SHA256. Evidencia privada
+local: `/tmp/respaw-pico-ap-fix-20261003/`; segunda copia:
+`~/.local/share/respaw/backups/20261003/respaw-pico-ap-fix/`.
+
+La lectura posterior del Pico confirmó AP activo, SSID `ResPaw-Setup-912E`,
+dirección `192.168.4.1`, seguridad `4194310` y contraseña esperada conservada.
+La regresión del portal rechaza el enum genérico incorrecto en un fixture RP2;
+`make check` pasó con 175 pruebas y WebSocket instalado. La autenticación desde
+el teléfono y la conexión Wi-Fi/WSS siguen pendientes de confirmación real.
+
 ## Mega conectado
 
 Se leyeron flash, EEPROM y configuración dos veces antes de una eventual carga.
