@@ -2,6 +2,7 @@
 
 Esta entrega continúa la [verificación inicial del enlace](verificacion-enlace-2026-10-03.md).
 El software está integrado; la prueba física completa sigue pendiente.
+La prueba real de nube se añadió el 4 de octubre UTC, todavía 3 de octubre en Lima.
 
 ## Raspberry de Católica
 
@@ -11,14 +12,49 @@ El software está integrado; la prueba física completa sigue pendiente.
 - Ollama instalado durante la preparación y luego detenido/deshabilitado por
   instrucción del usuario. El ensayo Qwen3 1.7B no produjo respuesta en 180 s;
   no se verificó conversación ni recuerdo con ese modelo en la Raspberry.
-- Interfaz comprobada desde la Mac a través de SSH en `127.0.0.1:8765`:
+- En la comprobación inicial desde la Mac por SSH en `127.0.0.1:8765`, antes
+  de instalar las credenciales, la interfaz informó:
   `provider:openai`, `configured:false`, voz pendiente y robot desconectado.
-- No se hicieron llamadas reales a OpenAI ni ElevenLabs: las claves siguen pendientes.
+- Las claves de OpenAI y ElevenLabs se instalaron después en archivos privados
+  con permisos 0600: `/tmp/respaw-cloud.env` en la Mac y
+  `~/.local/state/respaw/cloud.env` en la Raspberry. Sus valores no se guardaron
+  en Git ni en logs.
 - 83 pruebas de enlace, transporte, memoria y APIs pasaron en Python 3.13.5.
   Después se comprobaron también 20 pruebas del proveedor y voz con campos
   de configuración vacíos. Las respuestas de IA y audio de esas pruebas son fixtures.
   El release de contacto pasó luego 131 pruebas en la Raspberry, incluyendo
   transporte, respuesta corporal, memoria y API local, con claves vacías.
+
+## Prueba real de GPT, memoria y voz
+
+La Raspberry completó dos turnos reales con OpenAI `gpt-4o-mini`, con respuestas
+estructuradas válidas y HTTP 200. El dato ficticio de un gato llamado
+**Nube** se guardó como recuerdo autorizado y se recuperó en una sesión nueva
+y una instancia nueva usando la misma SQLite temporal. Esto comprueba la
+persistencia y recuperación con el proveedor real sin introducir recuerdos
+de prueba en la base de uso habitual.
+
+La ruta de producción `/api/speak` obtuvo una respuesta real de ElevenLabs:
+HTTP 200 y 56050 bytes MP3, con voz George (`JBFqnCBsd6RMkjVDRZzb`). `ffprobe`
+verificó MP3 mono, 44100 Hz y 3,436553 segundos. SHA256:
+`eb2dba7019b4e5da3e23295748fbf4cf24363fce9271a1bd2d4112e1c628fab2`.
+La evidencia privada está en `~/.cache/respaw/live-cloud-20261003/report.json` y
+`~/.cache/respaw/live-cloud-20261003/voice-test.mp3` en la Raspberry. El destino
+de su copia en la Mac es `/tmp/respaw-live-cloud-20261003/`.
+
+La API de producción de la Raspberry en 8765, accesible mediante el túnel local,
+también pasó `POST /api/transcribe` con ese MP3 sintético de ElevenLabs. OpenAI
+`gpt-4o-mini-transcribe` devolvió HTTP 200 y el texto «Tu gato se llama Nube en
+esta prueba. Suena adorable.», validado por presencia de gato y Nube. El
+resultado está en `/tmp/respaw-live-cloud-20261003/transcription-report.json`
+en la Mac. Es una prueba real del proveedor STT y la ruta de producción con
+audio sintético, sin captura de voz humana.
+La solicitud no creó un perfil persistente.
+
+El Pico siguió offline durante la prueba. No se comprobó el cuerpo, el parlante
+ni una expresión visible en TFT. El MP3 corresponde al flujo de audio del
+navegador; obtener esos bytes no acredita reproducción por el robot. El
+micrófono físico y el recorrido de una conversación hablada real quedan pendientes.
 
 ## Pico W físico
 
@@ -84,9 +120,6 @@ solo para un robot real listo y compatible. El servidor usa una presión nueva
 y fresca para solicitar `FACE listening`, sin GPT, voz ni memoria. STOP, cambio
 de sesión, desconexión y 30 segundos sin presencia web lo desarman; la
 generación de consentimiento impide rearmar con solicitudes viejas.
-`tests/browser_contact_smoke.py` pasó con transporte ficticio: consentimiento,
-pulsos, STOP, respuestas y polls retenidos, cambios de sesión y controles móviles.
-Esta prueba no acredita un FSR conectado ni una cara visible en la TFT.
 
 `tests/browser_contact_smoke.py` pasó en Chrome con la API local real y un
 transporte fixture que declara capacidad de órdenes y pulsos sintéticos. Probó
@@ -99,5 +132,8 @@ voz ni guardado de recuerdos. Las capturas están en
 
 Para completar el recorrido real faltan: configurar Wi-Fi del Pico, montar
 D18→GP1 adaptado de 5 V a 3,3 V, GP0→D19 y GND común; habilitar TX después de
-confirmar el montaje; comprobar contacto, ACK y cara en TFT; después probar conversación, memoria
-y voz con las claves. El audio del navegador aún no llega al parlante del robot.
+confirmar el montaje; comprobar contacto, ACK y cara en TFT; después probar
+conversación, memoria y voz junto al cuerpo. GPT, recuperación de memoria y
+generación de MP3 y STT de audio sintético ya pasaron con proveedores reales;
+falta comprobar el micrófono físico, el ciclo hablado real y llevar el audio
+del navegador al parlante del robot.

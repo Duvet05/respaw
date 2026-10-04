@@ -6,9 +6,12 @@ al operador local mediante `NetworkRobot`. Solo un ACK real del Mega termina
 una orden con `mega_accepted`; Detener no espera el ACK de una expresión anterior.
 
 El proveedor activo es `openai`, modelo `gpt-4o-mini`, con voz `cloud`.
-Ollama quedó detenido y deshabilitado a petición del usuario. Faltan las claves:
-la interfaz arranca y explica qué configuración falta; no consulta proveedores
-sin sus credenciales.
+Ollama quedó detenido y deshabilitado a petición del usuario. Las claves de
+OpenAI y ElevenLabs están instaladas en archivos privados con permisos 0600,
+fuera de Git. La Raspberry completó dos turnos reales con recuperación de
+memoria en SQLite temporal, una solicitud real de MP3 a ElevenLabs y STT
+OpenAI mediante la API de producción con ese audio sintético. El cuerpo,
+el micrófono físico y el parlante siguen pendientes de conexión y prueba.
 
 ## Servicio y configuración
 
@@ -37,8 +40,9 @@ systemctl --user enable --now respaw-companion.service
 ## Credenciales
 
 Crear `~/.local/state/respaw/cloud.env`, fuera de Git y del release, con permisos
-0600. Systemd carga el archivo sin ejecutar su contenido. Campos vacíos dejan
-esas funciones pendientes:
+0600. Las credenciales de esta instalación ya están en ese archivo. Systemd
+lo carga sin ejecutar su contenido. En una instalación nueva, los campos
+vacíos dejan esas funciones pendientes:
 
 ```text
 OPENAI_API_KEY=
@@ -83,6 +87,17 @@ mensaje real de ResPaw mediante ElevenLabs y reproduce MP3 en ese navegador.
 STOP detiene el reproductor e invalida resultados tardíos; el proveedor puede
 terminar una solicitud que ya recibió.
 
+La prueba real del 4 de octubre UTC (3 de octubre en Lima) recibió HTTP 200
+desde `/api/speak`: un MP3 de 56050 bytes con George
+(`JBFqnCBsd6RMkjVDRZzb`). Esa verificación usa el proveedor y la ruta de
+producción, pero no demuestra sonido por el parlante del robot.
+
+`POST /api/transcribe` también pasó en la API de producción de la Raspberry:
+`gpt-4o-mini-transcribe` transcribió el MP3 sintético de ElevenLabs con HTTP 200
+y recuperó correctamente gato y Nube. El archivo es mono a 44100 Hz y dura
+3,436553 segundos. La prueba confirma STT en nube con audio sintético; falta
+captura desde un micrófono físico y el ciclo de una conversación hablada real.
+
 El audio sale por el dispositivo que abre la web. Falta conectar audio generado
 al parlante del robot y definir su micrófono. El DFPlayer del Mega reproduce
 pistas de su tarjeta y no recibe estos MP3.
@@ -94,6 +109,11 @@ Los recuerdos elegidos con **Recordar este mensaje** persisten en
 corriente permanecen en RAM. Corregir u olvidar invalida respuestas pendientes.
 El proveedor recibe historial acotado y recuerdos seleccionados para el turno;
 SQLite permanece en la Raspberry.
+
+La prueba real de GPT recuperó el recuerdo ficticio de la mascota Nube en una
+sesión nueva y después de crear otra instancia con la misma SQLite temporal.
+El ensayo no modificó la base habitual de recuerdos. Las respuestas de
+`gpt-4o-mini` pasaron la validación estructurada y devolvieron HTTP 200.
 
 GPT usa búsqueda por palabras y contexto, sin exigir embeddings Ollama. El
 contexto físico contiene disponibilidad y presión actual de `fsr_a8` solo con

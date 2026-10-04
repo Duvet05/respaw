@@ -34,8 +34,8 @@ el código existente de las conexiones que todavía deben completarse.
 | Pico gateway, `pico/source/respaw-gateway/` | Instalado; Wi-Fi físico pendiente de setup | Configuración Wi-Fi y enlace WSS. La guía del gateway y el informe de verificación distinguen pruebas de implementación |
 | Mega ↔ Pico bidireccional | Código integrado; montaje pendiente | TX del gateway requiere habilitación explícita, capacidad del Mega y PING confirmado; los IDs y ACK están correlacionados |
 | Contacto → evento → decisión → gesto | Código integrado; prueba física pendiente | Opción por sesión «Responder al contacto»: presión nueva y fresca solicita `FACE listening` sin GPT, voz ni memoria; contexto físico actual para conversación aparte |
-| Proveedor de conversación en nube | GPT seleccionado; clave pendiente | Responses con esquema estricto y `store:false`; validación compartida; no cambia automáticamente a Ollama |
-| Voz completa en el robot | Voz de navegador implementada | STT OpenAI y TTS ElevenLabs, además del modo local; falta micrófono y transporte al parlante del robot |
+| Proveedor de conversación en nube | Credencial instalada; GPT real verificado | Dos turnos gpt-4o-mini y recuperación de memoria con SQLite temporal; Responses con esquema estricto y `store:false`; no cambia automáticamente a Ollama |
+| Voz completa en el robot | TTS y STT en nube comprobados con audio sintético | /api/speak generó MP3 ElevenLabs y /api/transcribe pasó por la API de producción; micrófono físico, ciclo hablado y transporte al parlante del robot pendientes |
 
 Las [verificaciones de septiembre](verificacion-pico-2026-09-14.md) validan el
 firmware v2 instalado entonces, no esta arquitectura completa. La captura del

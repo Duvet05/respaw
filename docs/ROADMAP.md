@@ -13,9 +13,9 @@ prueba de parser o un log del Pico no certifica la cara dibujada por el Mega.
 | 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Mega v2 cargado y protocolo USB físico comprobado; usuario confirmó ausencia de cables UART. TX del Pico deshabilitado |
 | 4. Primer gesto | Server → Pico → Mega → TFT; confirmación del Mega y observación de la cara | Pendiente del Mega, TFT y cableado con adaptación de nivel |
 | 5. Primer evento físico | Contacto → Mega → Pico → servidor con sensor y estado | FSR A8 y reacción opcional por sesión implementados; pendiente de presión física controlada, recepción real y gesto observado |
-| 6. Cerebro y memoria | Companion usa el enlace del robot y recupera recuerdos del perfil correcto entre sesiones | Integrado y desplegado; pruebas de memoria y sockets con fixtures pasan. Conversación real GPT pendiente de clave |
-| 7. Modelo en nube | Proveedor explícito, credencial en el servidor, mismas validaciones de respuesta y cancelación | GPT seleccionado; adaptador probado con fixtures. Clave y consulta real pendientes |
-| 8. Voz en el robot | Micrófono → STT → respuesta → TTS → parlante, con STOP | Voz del navegador implementada y probada con WAV local; claves y audio al parlante del robot pendientes |
+| 6. Cerebro y memoria | Companion usa el enlace del robot y recupera recuerdos del perfil correcto entre sesiones | Dos turnos reales GPT y recuerdo ficticio recuperado en sesión e instancia nuevas con SQLite temporal; falta integrar la conversación con el cuerpo conectado |
+| 7. Modelo en nube | Proveedor explícito, credencial en el servidor, mismas validaciones de respuesta y cancelación | Clave privada instalada; OpenAI gpt-4o-mini respondió HTTP 200 con estructura válida desde la Raspberry; cancelación probada con fixtures |
+| 8. Voz en el robot | Micrófono → STT → respuesta → TTS → parlante, con STOP | /api/speak obtuvo MP3 real ElevenLabs y /api/transcribe pasó con ese audio sintético en la API de producción; micrófono físico, ciclo hablado real y parlante pendientes |
 
 El hito 3 incorpora el parser de producción del Mega en ambos puertos, con
 buffers separados y respuestas al solicitante. Solo un controlador conserva

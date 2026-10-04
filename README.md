@@ -55,8 +55,12 @@ make firmware    # Compila para Mega con dependencias fijadas; no carga la placa
 
 La guía offline explica la preparación inicial de modelos, la voz opcional y el
 enlace USB. Ese modo no descarga modelos automáticamente ni cambia de proveedor
-si falla Ollama. La Raspberry usa ahora el proveedor GPT explícito y espera sus
-claves de API para conversar.
+si falla Ollama. La Raspberry usa el proveedor GPT explícito, con credenciales
+privadas instaladas. Pasaron dos turnos reales, recuperación de un recuerdo
+ficticio entre sesiones e instancias, generación de MP3 con ElevenLabs y
+transcripción OpenAI de ese audio sintético mediante la API de producción.
+El Pico, el cuerpo, el micrófono físico y el audio al parlante siguen pendientes;
+los resultados están en el [informe de integración](docs/verificacion-integracion-2026-10-03.md).
 
 ## Archivo de recuperación de Pico W y Mega 2560
 
