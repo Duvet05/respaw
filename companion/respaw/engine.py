@@ -6,6 +6,7 @@ import time
 import uuid
 
 from .model import ACTIVITIES, validate_reply
+from .physical_interaction import ContactResponseChanged, PhysicalInteraction
 from .store import clean_text
 
 
@@ -30,6 +31,8 @@ class Companion:
         self.store, self.model, self.robot, self.speech = store, model, robot, speech
         self.sessions = {}
         self.lock = threading.RLock()
+        self.active_session_id = None
+        self.physical = PhysicalInteraction(self)
 
     def start(self, user_id=None):
         name = self.store.profile(user_id)["name"] if user_id else "Invitado"
@@ -42,7 +45,9 @@ class Companion:
                     del self.sessions[key]
             if len(self.sessions) >= 100:
                 raise ValueError("Demasiadas sesiones abiertas; reinicia la aplicación.")
+            self.physical.disarm_locked()
             self.sessions[session.id] = session
+            self.active_session_id = session.id
         return {"session_id": session.id, "name": name, "guest": user_id is None}
 
     def session(self, session_id):
@@ -60,6 +65,7 @@ class Companion:
                 raise ValueError("Espera la respuesta o pulsa Detener.")
             request_id = str(uuid.uuid4())
             session.request_id = request_id
+            self.physical.chat_started_locked()
             generation = session.generation
             opening = not session.history
             user_message = {"id": str(uuid.uuid4()), "role": "user", "content": text}
@@ -107,8 +113,10 @@ class Companion:
                         "latency_ms": round((time.monotonic() - started) * 1000),
                         "sources": sources, "retrieval": dict(self.store.semantic_status)}
         finally:
+            physical_snapshot = self.physical.chat_finished_snapshot()
             with self.lock:
                 if session.request_id == request_id:
+                    self.physical.chat_finished_locked(physical_snapshot)
                     session.request_id = None
 
     def stop(self, session_id):
@@ -116,13 +124,26 @@ class Companion:
             session = self.session(session_id)
             session.generation += 1
             session.request_id = None
+            self.physical.disarm_locked()
             if self.speech:
                 self.speech.stop()
         try:
             self.robot.command("STOP")
         except (RuntimeError, OSError):
             pass
-        return {"stopped": True}
+        return {"stopped": True, "contact_response": self.physical.status(session_id)}
+
+    def contact_response(self, session_id, enabled, generation=None):
+        try:
+            return self.physical.set_enabled(session_id, enabled, generation)
+        except ContactResponseChanged as error:
+            raise Cancelled(str(error)) from None
+
+    def robot_snapshot(self, session_id):
+        return self.physical.poll_snapshot(session_id)
+
+    def close(self):
+        self.physical.close()
 
     def save_memory(self, session_id, message_id, topic="", kind="episode", event_date=None):
         with self.lock:
@@ -158,6 +179,7 @@ class Companion:
                     other.recent_memory_ids.clear()
             if self.speech:
                 self.speech.stop()
+            self.physical.disarm_locked()
         return {"changed": True, "conversation_reset": True}
 
     def choose_activity(self, session_id, activity):

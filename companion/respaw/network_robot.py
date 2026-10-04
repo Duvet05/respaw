@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import secrets
 import threading
+import time
 from urllib.parse import urlparse
 
 from .model import EXPRESSIONS
@@ -18,6 +19,7 @@ class CommandCancelled(RuntimeError):
 
 class NetworkRobot:
     supports_command_cancellation = True
+    supports_contact_response = True
 
     def __init__(self, url="ws://127.0.0.1:8767/operator", token_file=None, *, token=None,
                  robot_id=None, poll_interval=0.5, timeout=12, start_reader=True):
@@ -47,7 +49,9 @@ class NetworkRobot:
         self.closed = threading.Event()
         self.state = {"simulated": False, "ready": False, "expression": "neutral", "measurement": None,
                       "error": "El Pico aún no confirma el enlace con el Mega.", "contact": None,
-                      "connected": False, "capabilities": None, "transport": "wifi"}
+                      "connected": False, "capabilities": None, "transport": "wifi", "touch": None}
+        self.touch_received_at = None
+        self.last_refresh_at = None
         self.reader = None
         if start_reader:
             self.reader = threading.Thread(target=self._read, daemon=True, name="respaw-network-robot")
@@ -79,7 +83,21 @@ class NetworkRobot:
                     order = self.dispatch_sequence
                     packet = {**packet, "client_id": self.client_id, "sequence": order}
                 websocket.send(json.dumps(packet, separators=(",", ":")))
-            raw = websocket.recv(timeout=self.timeout)
+            if cancelled is None:
+                raw = websocket.recv(timeout=self.timeout)
+            else:
+                deadline = time.monotonic() + self.timeout
+                while True:
+                    if self.closed.is_set() or cancelled():
+                        raise CommandCancelled("La espera de confirmación del robot se canceló.")
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError("Robot acknowledgement timeout")
+                    try:
+                        raw = websocket.recv(timeout=min(0.2, remaining))
+                        break
+                    except TimeoutError:
+                        continue
             if not isinstance(raw, str) or len(raw.encode("utf-8")) > 512:
                 raise ValueError("Invalid link response")
             result = json.loads(raw)
@@ -100,6 +118,18 @@ class NetworkRobot:
                     pass
 
     def _refresh(self):
+        try:
+            self._refresh_state()
+        except RuntimeError:
+            with self.lock:
+                self.state.update(ready=False, connected=False, contact=None, measurement=None,
+                                  touch=None, error="Se perdió el enlace de red con el robot.")
+                self.touch_received_at = None
+                self.last_refresh_at = None
+            raise
+
+    def _refresh_state(self):
+        started = time.monotonic()
         status = self._request({"v": 1, "type": "status"})
         if (status.get("type") != "status" or type(status.get("connected")) is not bool
                 or (self.robot_id is not None and status.get("robot_id") != self.robot_id)):
@@ -108,32 +138,60 @@ class NetworkRobot:
         ready = (status["connected"] and status.get("transport") == "wifi"
                  and status.get("mega_connected") is True and status.get("command_ready") is True
                  and isinstance(capabilities, dict)
-                 and capabilities.get("commands") is True)
+                 and capabilities.get("commands") is True and time.monotonic() - started < 6)
         measurement = None
+        touch = None
+        touch_received_at = None
         if ready:
             telemetry = self._request({"v": 1, "type": "telemetry", "kind": "measurement"})
             if telemetry.get("type") != "telemetry" or telemetry.get("kind") != "measurement":
                 raise RuntimeError("El servidor devolvió telemetría no válida.")
             measurement = telemetry.get("event")
+            touch_request_at = time.monotonic()
+            pulse = self._request({"v": 1, "type": "telemetry", "kind": "touch"})
+            if (set(pulse) != {"v", "type", "kind", "event"} or pulse["type"] != "telemetry" or pulse["kind"] != "touch"):
+                raise RuntimeError("El servidor devolvió un pulso de contacto no válido.")
+            touch = pulse["event"]
+            if touch is not None:
+                if (not isinstance(touch, dict) or set(touch) != {"id", "age_ms"}
+                        or not isinstance(touch["id"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", touch["id"])
+                        or type(touch["age_ms"]) is not int or not 0 <= touch["age_ms"] <= 2000):
+                    raise RuntimeError("El servidor devolvió un pulso de contacto no válido.")
+                # Conservatively include the request and close-handshake time.
+                touch_received_at = touch_request_at
+        fresh = time.monotonic() - started < 6
+        if not fresh:
+            ready = False
+            capabilities = touch = measurement = touch_received_at = None
         with self.lock:
             self.state.update(connected=status["connected"], ready=bool(ready), capabilities=capabilities,
                               contact=status.get("contact") if ready else None,
-                              measurement=measurement,
+                              measurement=measurement, touch=touch,
                               error=None if ready else "El Pico o el Mega aún no confirma el enlace.")
+            self.touch_received_at = touch_received_at
+            self.last_refresh_at = started
 
     def _read(self):
         while not self.closed.is_set():
             try:
                 self._refresh()
             except RuntimeError:
-                with self.lock:
-                    self.state.update(ready=False, connected=False, contact=None, measurement=None,
-                                      error="Se perdió el enlace de red con el robot.")
+                pass
             self.closed.wait(self.poll_interval)
 
     def snapshot(self):
         with self.lock:
-            return deepcopy(self.state)
+            result = deepcopy(self.state)
+            if self.last_refresh_at is None or time.monotonic() - self.last_refresh_at >= 6:
+                result.update(ready=False, capabilities=None, contact=None, measurement=None, touch=None)
+                if self.last_refresh_at is not None:
+                    result["error"] = "El estado del robot por red dejó de estar actualizado."
+            touch = result["touch"]
+            if touch is not None:
+                elapsed = 0 if self.touch_received_at is None else max(0, time.monotonic() - self.touch_received_at)
+                age = touch["age_ms"] + int(elapsed * 1000)
+                result["touch"] = {"id": touch["id"], "age_ms": age} if age <= 2000 else None
+            return result
 
     def command(self, command, argument="", cancelled=None):
         if command not in ("STOP", "FACE", "MEASURE", "PING"):

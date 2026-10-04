@@ -46,6 +46,8 @@ class Session:
     command_ready: bool = False
     command_ready_at: float | None = None
     dispatch_sequences: dict = field(default_factory=dict)
+    touch_id: str | None = None
+    touch_at: float | None = None
 
 
 @dataclass
@@ -118,6 +120,10 @@ class LinkServer:
         if session is not None and self._mega_connected(session, now):
             if kind == "contact":
                 event = session.contact
+            elif kind == "touch":
+                age = None if session.touch_at is None else now - session.touch_at
+                if age is not None and 0 <= age < 2:
+                    event = {"id": session.touch_id, "age_ms": int(age * 1000)}
             elif session.measurement_at is not None and 0 <= now - session.measurement_at < 60:
                 event = session.measurement
         return {"v": 1, "type": "telemetry", "kind": kind, "event": event}
@@ -130,6 +136,7 @@ class LinkServer:
                       ((event["uptime_ms"] - session.mega_uptime) & 0xFFFFFFFF) >= 0x80000000))
             if reboot:
                 session.contact = session.measurement = session.measurement_at = None
+                session.touch_id = session.touch_at = None
                 session.mega_uptime = None
             session.capabilities = {key: event.get(key, False) for key in ("sensor", "audio", "commands")}
             session.measuring = event.get("measuring", False)
@@ -138,7 +145,17 @@ class LinkServer:
             if kind == "heartbeat":
                 session.mega_uptime = event["uptime_ms"]
         elif kind == "contact":
+            # A press present at startup is a baseline, not a new interaction.
+            reboot = (session.mega_uptime is not None and
+                      ((event["uptime_ms"] - session.mega_uptime) & 0xFFFFFFFF) >= 0x80000000)
+            if reboot:
+                session.contact = session.measurement = session.measurement_at = session.capabilities = None
+                session.touch_id = session.touch_at = None
+                session.measuring = False
+            if session.contact is not None and session.contact["pressed"] is False and event["pressed"] is True:
+                session.touch_id, session.touch_at = secrets.token_hex(8), now
             session.contact = event
+            session.mega_uptime = event["uptime_ms"]
         elif kind == "measurement":
             session.measurement, session.measurement_at = event, now
             session.measuring = False
@@ -151,6 +168,7 @@ class LinkServer:
             # A frame after an outage cannot recover missed contact edges or
             # establish that earlier readings and capabilities still apply.
             session.contact = session.measurement = session.measurement_at = session.capabilities = None
+            session.touch_id = session.touch_at = None
             session.measuring = False
 
     async def send_action(self, command, argument=None):
@@ -307,7 +325,7 @@ class LinkServer:
                 if set(packet) == {"v", "type"} and packet["type"] == "status":
                     result = self.status()
                 elif (set(packet) == {"v", "type", "kind"} and packet["type"] == "telemetry"
-                      and packet["kind"] in ("contact", "measurement")):
+                      and packet["kind"] in ("contact", "measurement", "touch")):
                     result = self.telemetry(packet["kind"])
                 elif packet.get("type") == "command":
                     result = await self.operator_command(packet)

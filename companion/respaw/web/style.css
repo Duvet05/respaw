@@ -137,6 +137,7 @@ select,input {
 }
 .check input {
   width:auto;
+  accent-color:var(--accent);
 }
 .device {
   font-size:12px;
@@ -149,6 +150,16 @@ select,input {
 .device p {
   font-size:12px;
   overflow-wrap:anywhere;
+}
+.contact-control {
+  margin-top:16px;
+  font-size:12px;
+}
+.contact-control:has(input:disabled) {
+  color:var(--muted);
+}
+#contact-response-status {
+  margin:6px 0 12px;
 }
 .conversation {
   display:flex;

@@ -119,6 +119,8 @@ class Handler(BaseHTTPRequestHandler):
             return app.chat(session_id, body["text"])
         if path == "/api/stop":
             return app.stop(session_id)
+        if path == "/api/contact-response":
+            return app.contact_response(session_id, body["enabled"], body.get("generation"))
         if path == "/api/memories":
             return app.memories(session_id)
         if path == "/api/memories/save":
@@ -133,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
             app.robot.command("MEASURE")
             return app.robot.snapshot()
         if path == "/api/robot":
-            return app.robot.snapshot()
+            return app.robot_snapshot(session_id)
         if path == "/api/speak":
             # Only speak the last actual assistant response, not arbitrary submitted text.
             with app.lock:

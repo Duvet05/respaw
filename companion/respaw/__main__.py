@@ -76,8 +76,11 @@ def main(argv=None):
         pass
     finally:
         server.server_close()
-        speech.stop()
-        robot.close()
+        try:
+            app.close()
+        finally:
+            speech.stop()
+            robot.close()
 
 
 if __name__ == "__main__":

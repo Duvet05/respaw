@@ -3,7 +3,10 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+import time
+import threading
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -118,3 +121,102 @@ class NetworkRobotTests(unittest.IsolatedAsyncioTestCase):
         self.transport.close()
         with self.assertRaisesRegex(RuntimeError, "cerrado"):
             self.transport.command("STOP")
+
+    async def test_short_contact_pulse_survives_release_and_clears_on_reconnect(self):
+        from websockets.asyncio.client import connect
+
+        async def frame(pico, event):
+            await pico.send(encode({"v": 1, "type": "event", "source": "uart", "event": event}))
+            await pico.recv()
+
+        async def prepare(pico):
+            await pico.send(encode({"v": 1, "type": "hello", "robot_id": "test_pico", "transport": "wifi"}))
+            await pico.recv()
+            await frame(pico, {"v": 1, "type": "ready", "board": "mega2560", "sensor": False,
+                               "audio": False, "commands": True})
+            await pico.send(encode({"v": 1, "type": "heartbeat", "id": 1, "command_ready": True}))
+            await pico.recv()
+
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": False, "uptime_ms": 100}
+        async with connect(self.robot_url, additional_headers={"Authorization": "Bearer " + self.token}, proxy=None) as pico:
+            await prepare(pico)
+            await frame(pico, contact)
+            await asyncio.to_thread(self.transport._refresh)
+            self.assertTrue(self.transport.supports_contact_response)
+            self.assertIsNone(self.transport.snapshot()["touch"])
+            await frame(pico, {**contact, "pressed": True, "uptime_ms": 150})
+            await frame(pico, {**contact, "pressed": False, "uptime_ms": 200})
+            await asyncio.to_thread(self.transport._refresh)
+            state = self.transport.snapshot()
+            self.assertFalse(state["contact"]["pressed"])
+            self.assertIsNotNone(state["touch"])
+            self.transport.touch_received_at -= 3
+            self.assertIsNone(self.transport.snapshot()["touch"])
+        await asyncio.to_thread(self.transport._refresh)
+        self.assertIsNone(self.transport.snapshot()["touch"])
+        async with connect(self.robot_url, additional_headers={"Authorization": "Bearer " + self.token}, proxy=None) as pico:
+            await prepare(pico)
+            await frame(pico, {**contact, "pressed": True})
+            await asyncio.to_thread(self.transport._refresh)
+            self.assertIsNone(self.transport.snapshot()["touch"])
+
+    async def test_invalid_touch_metadata_and_timeout_clear_existing_pulse(self):
+        status = {"v": 1, "type": "status", "robot_id": "test_pico", "connected": True, "transport": "wifi",
+                  "mega_connected": True, "command_ready": True, "capabilities": {"commands": True}}
+        for event in ({"id": "a", "age_ms": True}, {"id": "a", "age_ms": -1}, {"id": "a", "age_ms": 2001},
+                      {"id": "a\n", "age_ms": 0}, {"id": "a", "age_ms": 0, "extra": "ignored"}):
+            self.transport.state["touch"] = {"id": "prior_pulse", "age_ms": 0}
+            self.transport.touch_received_at = time.monotonic()
+            self.transport._request = lambda packet: (status if packet["type"] == "status" else
+                {"v": 1, "type": "telemetry", "kind": packet["kind"], "event": event if packet["kind"] == "touch" else None})
+            with self.subTest(event=event), self.assertRaises(RuntimeError):
+                self.transport._refresh()
+            self.assertIsNone(self.transport.snapshot()["touch"])
+        self.transport.state["touch"] = {"id": "prior_pulse", "age_ms": 0}
+        self.transport.touch_received_at = time.monotonic()
+        def timeout(packet):
+            raise RuntimeError("Local operator timeout")
+        self.transport._request = timeout
+        with self.assertRaises(RuntimeError):
+            self.transport._refresh()
+        self.assertIsNone(self.transport.snapshot()["touch"])
+
+    async def test_snapshot_expires_when_reader_stalls_and_slow_refresh_cannot_restore_ready(self):
+        status = {"v": 1, "type": "status", "robot_id": "test_pico", "connected": True, "transport": "wifi",
+                  "mega_connected": True, "command_ready": True, "capabilities": {"commands": True},
+                  "contact": {"sensor": "fsr_a8", "pressed": True}}
+        self.transport._request = lambda packet: (status if packet["type"] == "status" else
+            {"v": 1, "type": "telemetry", "kind": packet["kind"],
+             "event": {"id": "recent_pulse", "age_ms": 10} if packet["kind"] == "touch" else None})
+        self.transport._refresh()
+        state = self.transport.snapshot()
+        self.assertTrue(state["ready"])
+        self.assertIsNotNone(state["touch"])
+        self.transport.touch_received_at -= 1
+        self.assertGreaterEqual(self.transport.snapshot()["touch"]["age_ms"], 1010)
+        self.transport.last_refresh_at -= 7
+        state = self.transport.snapshot()
+        self.assertFalse(state["ready"])
+        for key in ("capabilities", "contact", "measurement", "touch"):
+            self.assertIsNone(state[key])
+        with patch("respaw.network_robot.time.monotonic", side_effect=(100, 100, 100, 107)):
+            self.transport._refresh()
+        self.assertFalse(self.transport.snapshot()["ready"])
+        self.assertIsNone(self.transport.snapshot()["touch"])
+
+    async def test_cancelled_contact_ack_wait_exits_promptly_without_replay(self):
+        from websockets.asyncio.client import connect
+
+        cancelled = threading.Event()
+        async with connect(self.robot_url, additional_headers={"Authorization": "Bearer " + self.token}, proxy=None) as pico:
+            await pico.send(encode({"v": 1, "type": "hello", "robot_id": "test_pico", "transport": "wifi"}))
+            await pico.recv()
+            command = asyncio.create_task(asyncio.to_thread(self.transport.command, "FACE", "listening", cancelled.is_set))
+            self.assertEqual(json.loads(await pico.recv())["argument"], "listening")
+            started = time.monotonic()
+            cancelled.set()
+            with self.assertRaises(CommandCancelled):
+                await asyncio.wait_for(command, 1)
+            self.assertLess(time.monotonic() - started, 1)
+            with self.assertRaises(asyncio.TimeoutError):
+                await asyncio.wait_for(pico.recv(), 0.03)

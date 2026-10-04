@@ -20,7 +20,17 @@
       <button id="new-session" class="quiet wide">Comenzar otra conversación</button>
       <label class="check"><input type="checkbox" id="voice"> Leer las respuestas en voz alta</label>
       <audio id="voice-audio" controls hidden aria-label="Escuchar la respuesta"></audio>
-      <details class="device"><summary>Robot y conexión</summary><p id="model-status">Comprobando el modelo…</p><p id="memory-status"></p><p id="device-status">Pantalla en modo simulación</p><p id="contact-status"></p><button id="measure" class="quiet">Medir con el sensor</button><p id="measurement"></p></details>
+      <details class="device">
+        <summary>Robot y conexión</summary>
+        <p id="model-status">Comprobando el modelo…</p>
+        <p id="memory-status"></p>
+        <p id="device-status">Pantalla en modo simulación</p>
+        <p id="contact-status"></p>
+        <label class="check contact-control"><input type="checkbox" id="contact-response" disabled aria-describedby="contact-response-status"> Responder al contacto</label>
+        <p id="contact-response-status" role="status">Disponible cuando el robot esté conectado y listo.</p>
+        <button id="measure" class="quiet">Medir con el sensor</button>
+        <p id="measurement"></p>
+      </details>
     </aside>
     <section class="conversation" aria-label="Conversación">
       <div class="conversation-heading"><span>ESTE MOMENTO</span><button id="show-memories" class="quiet">Mis recuerdos <span id="memory-count">0</span></button></div>

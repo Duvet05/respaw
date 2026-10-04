@@ -9,6 +9,39 @@ let pending = false;
 let switching = true;
 let sessionVersion = 0;
 let voiceUrl = null;
+let contactGeneration = 0;
+let contactChanging = false;
+let contactStopping = false;
+let contactAvailable = false;
+let contactEnabled = false;
+let contactConsentGeneration = null;
+
+function applyContactResponse(state) {
+  const generation = Number.isSafeInteger(state?.generation) && state.generation >= 0
+    ? state.generation : null;
+  if (generation !== null && contactConsentGeneration !== null
+      && generation < contactConsentGeneration) return;
+  contactConsentGeneration = generation;
+  contactAvailable = state?.available === true && contactConsentGeneration !== null;
+  contactEnabled = contactAvailable && state.enabled === true;
+}
+
+function renderContactResponse() {
+  $('contact-response').checked = contactEnabled;
+  $('contact-response').disabled = switching || !session || contactChanging || contactStopping || !contactAvailable;
+  $('contact-response-status').textContent = contactChanging
+    ? 'Actualizando…'
+    : contactEnabled ? 'La cara responderá a nuevas pulsaciones en esta conversación.'
+      : contactAvailable ? 'Actívalo para que la cara responda a nuevas pulsaciones.'
+        : 'Disponible cuando el robot esté conectado y listo.';
+}
+
+function resetContactResponse() {
+  contactGeneration += 1;
+  contactChanging = contactAvailable = contactEnabled = false;
+  contactConsentGeneration = null;
+  renderContactResponse();
+}
 
 async function api(path, data = {}) {
   const response = await fetch(`/api/${path}`, {
@@ -115,12 +148,31 @@ async function refreshMemories() {
 
 async function stop() {
   epoch += 1;
+  const forSession = session;
+  resetContactResponse();
+  const contactVersion = contactGeneration;
+  contactStopping = true;
+  renderContactResponse();
   stopPlayback();
   if (recording?.state === 'recording') recording.stop();
   releaseMic();
   busy(false);
   face('neutral');
-  if (session) await api('stop');
+  try {
+    if (forSession) {
+      const result = await api('stop', { session_id: forSession.session_id });
+      if (session === forSession && contactVersion === contactGeneration && !switching) {
+        applyContactResponse(result.contact_response);
+        renderContactResponse();
+      }
+    }
+  } finally {
+    if (session === forSession && contactVersion === contactGeneration) {
+      contactStopping = false;
+      renderContactResponse();
+      await refreshRobot();
+    }
+  }
 }
 
 function stopPlayback() {
@@ -170,6 +222,7 @@ async function newSession() {
     if (version === sessionVersion) {
       switching = false;
       busy(false);
+      await refreshRobot();
     }
   }
 }
@@ -282,6 +335,39 @@ $('measure').onclick = async () => {
   } catch (error) { notice(error.message); }
 };
 
+$('contact-response').onchange = async () => {
+  if (switching || !session || contactChanging || contactStopping || !contactAvailable) {
+    renderContactResponse();
+    return;
+  }
+  const forSession = session;
+  const version = sessionVersion;
+  const generation = ++contactGeneration;
+  const enabled = $('contact-response').checked;
+  const consentGeneration = contactConsentGeneration;
+  contactChanging = true;
+  contactEnabled = enabled;
+  renderContactResponse();
+  const current = () => session === forSession && version === sessionVersion
+    && generation === contactGeneration && !switching;
+  try {
+    const result = await api('contact-response', { session_id: forSession.session_id, enabled,
+      ...(enabled ? { generation: consentGeneration } : {}) });
+    if (!current()) return;
+    applyContactResponse(result.contact_response);
+  } catch (error) {
+    if (!current()) return;
+    contactEnabled = false;
+    notice(error.message);
+  } finally {
+    if (current()) {
+      contactChanging = false;
+      renderContactResponse();
+      await refreshRobot();
+    }
+  }
+};
+
 async function loadProfiles(selected = '') {
   const profiles = await api('profiles');
   $('profile').replaceChildren(new Option('Invitado · sin recuerdos', ''));
@@ -354,17 +440,40 @@ async function initialize() {
   if (!status.speech.stt) $('mic').title = cloudVoice
     ? 'Configura la clave de OpenAI para transcribir.' : 'Configura whisper.cpp para transcribir sin conexión.';
   await refreshMemories();
-  setInterval(async () => {
-    try {
-      const robot = await api('robot');
-      robotStatus(robot);
-      if (robot.measurement) {
-        $('measurement').textContent = robot.measurement.valid
-          ? `${robot.measurement.bpm.toFixed(1)} BPM · RMSSD ${robot.measurement.rmssd.toFixed(1)} ms. Lectura orientativa.`
-          : robot.measurement.reason === 'simulator' ? 'El simulador no genera mediciones fisiológicas.' : 'Medición insuficiente. Puedes conversar sin medir.';
-      }
-    } catch { /* A closed local server will be reported on the next user action. */ }
-  }, 3000);
+  await refreshRobot();
+  setInterval(refreshRobot, 3000);
+}
+
+async function refreshRobot() {
+  if (!session || switching || contactStopping) return;
+  const forSession = session;
+  const version = sessionVersion;
+  const generation = contactGeneration;
+  const changingAtRequest = contactChanging;
+  const current = () => session === forSession && version === sessionVersion
+    && generation === contactGeneration && !switching;
+  try {
+    const robot = await api('robot', { session_id: forSession.session_id });
+    if (!current()) return;
+    robotStatus(robot);
+    const available = robot.simulated === false && robot.ready === true
+      && robot.capabilities?.commands === true && robot.contact_response?.available === true;
+    if (!available) resetContactResponse();
+    else if (!contactChanging && !changingAtRequest) {
+      applyContactResponse(robot.contact_response);
+      renderContactResponse();
+    }
+    if (robot.measurement) {
+      $('measurement').textContent = robot.measurement.valid
+        ? `${robot.measurement.bpm.toFixed(1)} BPM · RMSSD ${robot.measurement.rmssd.toFixed(1)} ms. Lectura orientativa.`
+        : robot.measurement.reason === 'simulator' ? 'El simulador no genera mediciones fisiológicas.' : 'Medición insuficiente. Puedes conversar sin medir.';
+    }
+  } catch {
+    if (!current()) return;
+    resetContactResponse();
+    $('contact-status').textContent = '';
+    $('device-status').textContent = 'No se pudo comprobar la conexión del robot.';
+  }
 }
 
 function robotStatus(robot) {

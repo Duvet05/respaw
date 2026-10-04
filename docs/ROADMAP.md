@@ -10,9 +10,9 @@ prueba de parser o un log del Pico no certifica la cara dibujada por el Mega.
 | --- | --- | --- |
 | 1. Servidor de enlace | Raspberry recibe `hello`, autentica el robot, mantiene latidos y rechaza entradas inválidas | Desplegado y verificado por Internet; once pruebas pasaron en la Raspberry |
 | 2. Pico por Wi-Fi | Configuración móvil, conexión WSS con TLS verificado, reinicio y reconexión | Gateway instalado; pendiente de configurar una red de 2,4 GHz real y verificar conexión física |
-| 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Implementado y compilado; pendiente de confirmar montaje y cargar Mega. TX del Pico deshabilitado |
+| 3. UART bidireccional | Mega procesa órdenes en Serial1 y emite sus confirmaciones por el mismo enlace | Mega v2 cargado y protocolo USB físico comprobado; usuario confirmó ausencia de cables UART. TX del Pico deshabilitado |
 | 4. Primer gesto | Server → Pico → Mega → TFT; confirmación del Mega y observación de la cara | Pendiente del Mega, TFT y cableado con adaptación de nivel |
-| 5. Primer evento físico | Contacto → Mega → Pico → servidor con sensor y estado | FSR A8 implementado; pendiente de presión física y recepción real |
+| 5. Primer evento físico | Contacto → Mega → Pico → servidor con sensor y estado | FSR A8 y reacción opcional por sesión implementados; pendiente de presión física controlada, recepción real y gesto observado |
 | 6. Cerebro y memoria | Companion usa el enlace del robot y recupera recuerdos del perfil correcto entre sesiones | Integrado y desplegado; pruebas de memoria y sockets con fixtures pasan. Conversación real GPT pendiente de clave |
 | 7. Modelo en nube | Proveedor explícito, credencial en el servidor, mismas validaciones de respuesta y cancelación | GPT seleccionado; adaptador probado con fixtures. Clave y consulta real pendientes |
 | 8. Voz en el robot | Micrófono → STT → respuesta → TTS → parlante, con STOP | Voz del navegador implementada y probada con WAV local; claves y audio al parlante del robot pendientes |
@@ -20,7 +20,16 @@ prueba de parser o un log del Pico no certifica la cara dibujada por el Mega.
 El hito 3 incorpora el parser de producción del Mega en ambos puertos, con
 buffers separados y respuestas al solicitante. Solo un controlador conserva
 la propiedad mediante PING; STOP está disponible desde ambos. La prueba con
-streams simulados no sustituye la carga y comprobación física del montaje.
+streams simulados no sustituye la comprobación física del montaje. La carga
+actual verificó 33932 bytes y el probe USB comprobó PING, cinco expresiones,
+rechazo de cara inválida, STOP, vencimiento y recuperación del propietario.
+No se observó la TFT y los cambios de A8 no certifican una presión voluntaria.
+
+La opción «Responder al contacto» debe permanecer apagada por defecto, usar
+solo pulsos nuevos de hasta dos segundos y no consultar GPT ni guardar
+recuerdos. Probar STOP, sesión nueva, desconexión, 30 segundos sin presencia
+web y activaciones tardías con generación vieja antes de habilitar el montaje
+físico. La casilla vuelve desmarcada después de esos cambios y de reconectar.
 
 ## Pruebas del Pico
 
@@ -71,6 +80,7 @@ make check
 python3 -m venv /tmp/respaw-link-venv
 /tmp/respaw-link-venv/bin/python -m pip install -r requirements-link.txt
 make check-link PYTHON=/tmp/respaw-link-venv/bin/python
+PYTHONPATH=companion /tmp/respaw-browser-venv/bin/python tests/browser_contact_smoke.py
 ```
 
 El comando habitual conserva las pruebas offline. `check-link` exige la versión

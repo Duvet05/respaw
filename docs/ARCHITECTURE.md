@@ -28,12 +28,12 @@ el código existente de las conexiones que todavía deben completarse.
 | --- | --- | --- |
 | Companion, `companion/respaw/` | Implementado y desplegado | Ollama local o GPT explícito; sesiones; memoria SQLite/FTS y embeddings locales opcionales; corrección y olvido; transporte `NetworkRobot` |
 | Interfaz del companion | Implementado, local | HTTP en `127.0.0.1:8765`; token de sesión y comprobación de origen; perfiles sin autenticación de cuentas remotas |
-| Mega v2, `mega2560/source/respaw-v2/` | Compilado; carga física pendiente | TFT, FSR, MAX30102 y DFPlayer; órdenes por USB y Serial1 con buffers separados, propietario por PING y contacto A8 |
+| Mega v2, `mega2560/source/respaw-v2/` | Cargado; protocolo USB físico comprobado | TFT, FSR, MAX30102 y DFPlayer; órdenes por USB y Serial1 con buffers separados, propietario por PING y contacto A8; montaje UART y gesto observado pendientes |
 | Pico v2, `pico/source/respaw-v2/` | Implementado | Receptor UART con límites, validación y caducidad; consola USB; Wi-Fi desactivado |
 | Servidor de enlace, `tools/robot_link_server.py` | Implementado y desplegado en Raspberry | WebSocket autenticado; identificación del Pico; latidos; eventos y órdenes de prueba. No ejecuta conversación ni guarda recuerdos |
 | Pico gateway, `pico/source/respaw-gateway/` | Instalado; Wi-Fi físico pendiente de setup | Configuración Wi-Fi y enlace WSS. La guía del gateway y el informe de verificación distinguen pruebas de implementación |
 | Mega ↔ Pico bidireccional | Código integrado; montaje pendiente | TX del gateway requiere habilitación explícita, capacidad del Mega y PING confirmado; los IDs y ACK están correlacionados |
-| Contacto → evento → decisión → gesto | Código integrado; prueba física pendiente | `contact` de FSR A8; contexto actual del modelo; FACE validado; el contacto no guarda recuerdos ni infiere emociones |
+| Contacto → evento → decisión → gesto | Código integrado; prueba física pendiente | Opción por sesión «Responder al contacto»: presión nueva y fresca solicita `FACE listening` sin GPT, voz ni memoria; contexto físico actual para conversación aparte |
 | Proveedor de conversación en nube | GPT seleccionado; clave pendiente | Responses con esquema estricto y `store:false`; validación compartida; no cambia automáticamente a Ollama |
 | Voz completa en el robot | Voz de navegador implementada | STT OpenAI y TTS ElevenLabs, además del modo local; falta micrófono y transporte al parlante del robot |
 
@@ -81,8 +81,10 @@ Cada puerto tiene su buffer y recibe sus propias respuestas. PING adquiere un
 controlador por seis segundos; STOP funciona desde ambos puertos. Contacto y
 telemetría son eventos aparte. El Pico recibe en UART0/GP1 y conserva GP0 como
 entrada salvo habilitación explícita y capacidad confirmada del nuevo Mega.
-La placa física aún tiene el firmware autónomo anterior, respaldado antes de
-una eventual carga. Conectar dos USB a una computadora no une sus UART.
+La placa física tiene el nuevo Mega v2 tras respaldar el firmware autónomo,
+EEPROM y configuración. La carga y el protocolo USB se comprobaron en la
+placa; el usuario confirmó que no hay cables UART entre las placas. Conectar
+dos USB a una computadora no une sus UART.
 
 | Señal | Montaje receptor v2 | Cambio bidireccional pendiente |
 | --- | --- | --- |
@@ -162,6 +164,16 @@ La memoria actual pertenece al perfil del servidor y se guarda solo al elegir
 RAM. El Pico conserva telemetría temporal, no recuerdos. Un contacto no se
 convierte automáticamente en memoria. Consultar el [acompañante local](offline-companion.md)
 y el [acompañante GPT en Raspberry](companion-raspberry.md).
+
+«Responder al contacto» requiere consentimiento explícito en una sesión y un
+robot real con capacidad de órdenes y enlace listo. El servidor conserva solo
+el último pulso en RAM, con ID efímero y antigüedad máxima de dos segundos;
+agrupa ráfagas y usa el pulso presente como estado inicial al armar. Una presión
+nueva solicita `FACE listening` con cancelación, sin consultar el modelo ni
+guardar memoria. STOP, otra sesión, pérdida de disponibilidad o 30 segundos
+sin presencia de la web desarman la opción. Una generación de consentimiento
+rechaza activaciones anteriores a esos cambios; la UI también descarta sus
+respuestas tardías. Volver a conectar no reactiva el consentimiento.
 
 El Mega v2 detiene medición y audio si desaparecen los PING después de haberse
 conectado al host. El firmware `respaw-autonomo` es otra alternativa instalada

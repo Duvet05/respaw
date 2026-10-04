@@ -20,11 +20,19 @@ del repositorio. `tools/arduino.sh` admite una instalación propia mediante
 
 Este comando no carga el sketch. Antes de cargar una placa, seguir la
 instrucción de respaldo del README de recuperación y verificar el cableado
-real. El 14 de septiembre de 2026 se cargó esta versión en el Mega recuperado:
+real. El 14 de septiembre de 2026 se cargó una revisión anterior de v2 en el Mega recuperado:
 la lectura posterior coincidió con el programa compilado y se verificaron las
 órdenes USB. El sensor de pulso y el DFPlayer no pudieron inicializarse en ese
 montaje. El [informe de hardware](../../../docs/verificacion-hardware-2026-09-14.md)
 detalla las comprobaciones y la validación física pendiente.
+
+El 3 de octubre se cargó esta revisión con órdenes por USB y Serial1. La
+lectura independiente posterior confirmó el HEX, el bootloader intacto y
+EEPROM/fuses sin cambios; el probe USB comprobó PING, FACE, STOP y vencimiento
+del controlador. El usuario confirmó que casi ningún periférico está
+conectado y no hay cables UART entre Mega y Pico. TFT, presión y gesto físico
+siguen pendientes. La [verificación de integración](../../../docs/verificacion-integracion-2026-10-03.md)
+registra el respaldo y los resultados reales.
 
 ## Hardware conservado
 

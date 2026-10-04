@@ -372,6 +372,7 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
                 await robot.send(encode({"v": 1, "type": "action_error", "id": action["id"], "reason": "mega_unavailable"}))
                 await robot.recv()
                 await operator.recv()
+
                 await operator.send(encode({**request, "command": "FACE", "argument": "warm", "sequence": 1}))
                 self.assertEqual(json.loads(await operator.recv())["reason"], "superseded")
                 with self.assertRaises(asyncio.TimeoutError):
@@ -383,3 +384,71 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
                 await robot.send(encode({"v": 1, "type": "action_error", "id": action["id"], "reason": "mega_unavailable"}))
                 await robot.recv()
                 await operator.recv()
+
+    async def touch(self):
+        async with self.connect(path=self.operator_url) as operator:
+            await operator.send(encode({"v": 1, "type": "telemetry", "kind": "touch"}))
+            packet = json.loads(await operator.recv())
+            self.assertEqual((packet["type"], packet["kind"]), ("telemetry", "touch"))
+            return packet["event"]
+
+    async def uart(self, ws, event, source="uart"):
+        await ws.send(encode({"v": 1, "type": "event", "source": source, "event": event}))
+        self.assertEqual(json.loads(await ws.recv())["type"], "event_received")
+
+    async def test_short_press_release_retains_only_recent_touch_pulse(self):
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": False, "uptime_ms": 100}
+        async with self.connect() as ws:
+            await self.hello(ws, transport="wifi")
+            await self.uart(ws, contact)
+            self.assertIsNone(await self.touch())
+            await self.uart(ws, {**contact, "pressed": True, "uptime_ms": 150})
+            await self.uart(ws, {**contact, "pressed": False, "uptime_ms": 200})
+            pulse = await self.touch()
+            self.assertRegex(pulse["id"], r"^[a-f0-9]{16}$")
+            self.assertLess(pulse["age_ms"], 2000)
+            self.assertFalse(self.probe.status()["contact"]["pressed"])
+            self.assertNotIn("touch", self.probe.status())
+            await self.uart(ws, {**contact, "pressed": True, "uptime_ms": 250})
+            newer = await self.touch()
+            self.assertNotEqual(newer["id"], pulse["id"])
+            self.probe.session.touch_at -= 3
+            self.assertIsNone(await self.touch())
+
+    async def test_initial_held_reboot_and_link_gap_never_replay_touch(self):
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": True, "uptime_ms": 100}
+        first_id = None
+        for iteration in range(2):
+            async with self.connect() as ws:
+                await self.hello(ws, transport="wifi")
+                await self.uart(ws, contact)
+                self.assertIsNone(await self.touch())
+                await self.uart(ws, {**contact, "pressed": False, "uptime_ms": 150})
+                await self.uart(ws, {**contact, "uptime_ms": 200})
+                pulse = await self.touch()
+                self.assertNotEqual(pulse["id"], first_id)
+                first_id = pulse["id"]
+                await self.uart(ws, {**contact, "uptime_ms": 250})
+                self.assertEqual((await self.touch())["id"], first_id)
+                await self.uart(ws, {"v": 1, "type": "ready", "board": "mega2560",
+                                     "sensor": False, "audio": False, "commands": True})
+                self.assertIsNone(await self.touch())
+                await self.uart(ws, contact)
+                self.assertIsNone(await self.touch())
+                await self.uart(ws, {**contact, "pressed": False, "uptime_ms": 200})
+                self.probe.session.mega_at -= 7
+                await self.uart(ws, {**contact, "uptime_ms": 250})
+                self.assertIsNone(await self.touch())
+
+    async def test_reboot_detected_in_contact_and_synthetic_press_emit_no_touch(self):
+        contact = {"v": 1, "type": "contact", "sensor": "fsr_a8", "pressed": False, "uptime_ms": 1000}
+        async with self.connect() as ws:
+            await self.hello(ws)
+            await self.uart(ws, contact)
+            await self.uart(ws, {**contact, "pressed": True, "uptime_ms": 1100}, source="synthetic")
+            self.assertIsNone(await self.touch())
+            await self.uart(ws, {**contact, "pressed": True, "uptime_ms": 10})
+            self.assertIsNone(await self.touch())
+            await self.uart(ws, {**contact, "pressed": False, "uptime_ms": 20})
+            await self.uart(ws, {**contact, "pressed": True, "uptime_ms": 30})
+            self.assertIsNotNone(await self.touch())

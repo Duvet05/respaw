@@ -100,5 +100,23 @@ contexto físico contiene disponibilidad y presión actual de `fsr_a8` solo con
 estado fresco. El contacto no identifica personas, no se guarda como recuerdo
 y no se interpreta como emoción.
 
+**Responder al contacto**, dentro de **Robot y conexión**, habilita una reacción
+breve de la cara solo para la conversación abierta y un robot real listo y
+compatible. El companion toma el contacto presente como estado inicial; una
+nueva presión fresca solicita `FACE listening`. Esta opción no consulta GPT,
+no sintetiza voz y no crea recuerdos. El navegador solo configura la opción y
+muestra su estado; la decisión y la orden pertenecen al servidor.
+
+Detener, comenzar otra conversación, perder el enlace o pasar 30 segundos sin
+consultas de la web desarman la opción. La reconexión no vuelve a activarla.
+Cada consentimiento usa la generación vigente del servidor: una activación o
+respuesta tardía anterior a Detener o a otra sesión no puede rearmarla. El
+contacto y su identificador efímero viven en RAM y no forman un historial.
+
+La conexión física sigue pendiente: el usuario confirmó que Mega y Pico no
+tienen cables UART. Se cargó Mega v2 y se comprobó el protocolo por USB; el
+Pico mantiene TX deshabilitado y todavía necesita configurar su Wi-Fi. Las
+pruebas de esta opción con un transporte fixture no demuestran un gesto en TFT.
+
 Consultar la [verificación del despliegue](verificacion-integracion-2026-10-03.md)
 para distinguir pruebas con fixtures de conexión y conversación físicas.
